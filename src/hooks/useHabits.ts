@@ -88,26 +88,60 @@ export function useCompleteHabit() {
 
       if (completionError) throw completionError;
 
-      // 2. Atualizar XP do usuário
+      // 2. Calcular Sequência (Streak)
+      let newStreak = profile.streak || 0;
+      
+      // Buscar a última conclusão (excluindo a atual)
+      const { data: lastCompletions } = await supabase
+        .from('habit_completions')
+        .select('completed_at')
+        .eq('user_id', session.user.id)
+        .lt('completed_at', date)
+        .order('completed_at', { ascending: false })
+        .limit(1);
+
+      const lastDate = lastCompletions?.[0]?.completed_at;
+      const today = new Date(date);
+      
+      if (lastDate) {
+        const last = new Date(lastDate);
+        const diffDays = Math.floor((today.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+          // Completou ontem, incrementa streak (apenas se for a primeira missão do dia)
+          const { count: todayCount } = await supabase
+            .from('habit_completions')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', session.user.id)
+            .eq('completed_at', date);
+            
+          if ((todayCount || 0) <= 1) { // <= 1 pois já inserimos a atual no passo 1
+            newStreak += 1;
+            toast.success(`Sequência mantida! ${newStreak} dias 🔥`);
+          }
+        } else if (diffDays > 1) {
+          // Quebrou a sequência
+          newStreak = 1;
+        }
+      } else {
+        // Primeira missão da história
+        newStreak = 1;
+      }
+
+      // 3. Atualizar Perfil (XP e Streak)
+      // O Level é atualizado via Trigger no Banco de Dados
       const newXp = (profile.xp || 0) + habit.xp_value;
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ xp: newXp })
+        .update({ 
+          xp: newXp,
+          streak: newStreak
+        })
         .eq('id', session.user.id);
 
       if (profileError) throw profileError;
 
-      // 3. Increment total completions to check for Dedicação (50 missions)
-      const { count: completionCount } = await supabase
-        .from('habit_completions')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', session.user.id);
-        
-      const totalCompletions = (completionCount || 0); 
-      
-      const userStreak = profile.streak || 0;
-
-      // 5. Verificar/Desbloquear conquistas
+      // 4. Buscar conquistas existentes para evitar duplicatas
       const { data: existingAchs } = await supabase
         .from('achievements')
         .select('title')
@@ -122,23 +156,35 @@ export function useCompleteHabit() {
         }
       };
 
+      // 5. Verificar total de missões para "Dedicação"
+      const { count: completionCount } = await supabase
+        .from('habit_completions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id);
+        
+      const totalCompletions = (completionCount || 0);
+
       checkAndAdd('Primeira Missão', 'Você completou sua primeira missão!', '⭐', true);
       checkAndAdd('Casal em Ação', 'Primeira missão em casal', '💑', habit.type === 'casal');
       checkAndAdd('Dedicação', '50 missões completadas', '🏆', totalCompletions >= 50);
       checkAndAdd('Centurião', 'Ganhe 100 XP', '💯', newXp >= 100);
       checkAndAdd('Lendário', 'Alcance o nível 7 (700 XP)', '👑', newXp >= 700);
-      checkAndAdd('Sequência de 7', '7 dias seguidos de missões', '🔥', userStreak >= 7);
-      checkAndAdd('Maratonista', '30 dias seguidos de missões', '🏅', userStreak >= 30);
+      checkAndAdd('Sequência de 7', '7 dias seguidos de missões', '🔥', newStreak >= 7);
+      checkAndAdd('Maratonista', '30 dias seguidos de missões', '🏅', newStreak >= 30);
 
-      // 6. Insert new achievements
+      // 6. Inserir novas conquistas
       if (newAchievements.length > 0) {
         const { error: achError } = await supabase.from('achievements').insert(newAchievements);
-        if (achError) console.error("Error inserting achievements:", achError);
-        else {
+        if (achError) {
+          console.error("Erro ao salvar conquistas:", achError);
+          // Não lançamos erro aqui para não travar a conclusão da missão
+        } else {
           newAchievements.forEach(ach => {
             setTimeout(() => {
-              toast.success(`Conquista Desbloqueada: ${ach.title} ${ach.emoji}`);
-            }, 500);
+              toast.success(`Conquista Desbloqueada: ${ach.title} ${ach.emoji}`, {
+                duration: 5000,
+              });
+            }, 1000);
           });
         }
       }

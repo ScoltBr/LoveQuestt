@@ -67,15 +67,15 @@ const Landing = () => {
         </motion.div>
 
         {/* Floating hearts */}
-        <div className="relative mt-12">
+        <div className="relative mt-12 px-4">
           <motion.div
-            animate={{ y: [0, -8, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="inline-block"
+            animate={{ y: [0, -12, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="inline-block w-full max-w-sm"
           >
-            <div className="bg-card rounded-2xl shadow-[var(--shadow-card)] p-6 max-w-sm mx-auto border border-border">
+            <div className="glass rounded-3xl p-6 border-white/30 text-left">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display font-bold">L</div>
+                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-display font-bold">L</div>
                 <div className="flex-1">
                   <p className="font-display font-bold text-foreground text-sm">Bom dia, Luiz ❤️</p>
                   <p className="text-xs text-muted-foreground font-body">Nível 4 · 680 XP</p>
@@ -84,14 +84,14 @@ const Landing = () => {
                   🔥 7
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {["Beber 2L de água", "Caminhar 20 min", "Ler 20 minutos"].map((m, i) => (
-                  <div key={m} className="flex items-center gap-2.5">
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center text-xs ${i < 2 ? "bg-success border-success text-success-foreground" : "border-border"}`}>
+                  <div key={m} className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center text-[10px] ${i < 2 ? "bg-success border-success text-success-foreground" : "border-white/20"}`}>
                       {i < 2 && "✓"}
                     </div>
-                    <span className={`text-sm font-body ${i < 2 ? "text-muted-foreground line-through" : "text-foreground"}`}>{m}</span>
-                    {i < 2 && <span className="ml-auto text-xs text-xp font-display font-bold">+15 XP</span>}
+                    <span className={`text-sm font-body ${i < 2 ? "text-muted-foreground line-through opacity-50" : "text-foreground font-medium"}`}>{m}</span>
+                    {i < 2 && <span className="ml-auto text-xs text-xp font-display font-bold animate-pulse">+15 XP</span>}
                   </div>
                 ))}
               </div>
@@ -110,15 +110,17 @@ const Landing = () => {
             <motion.div
               key={f.title}
               initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 * i, duration: 0.5 }}
-              className="bg-card border border-border rounded-2xl p-5 text-center"
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 * i, duration: 0.5 }}
+              whileHover={{ y: -5, scale: 1.02 }}
+              className="glass rounded-3xl p-5 text-center flex flex-col items-center"
             >
-              <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <f.icon className="w-5 h-5 text-primary" />
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4 transition-colors group-hover:bg-primary/20">
+                <f.icon className="w-6 h-6 text-primary" />
               </div>
               <h3 className="font-display font-bold text-foreground text-sm mb-1">{f.title}</h3>
-              <p className="text-xs text-muted-foreground font-body">{f.desc}</p>
+              <p className="text-[10px] leading-relaxed text-muted-foreground font-body">{f.desc}</p>
             </motion.div>
           ))}
         </div>

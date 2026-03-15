@@ -87,17 +87,19 @@ const Missions = () => {
       {/* Filters */}
       <div className="flex gap-2">
         {(["todas", "individual", "casal"] as const).map((f) => (
-          <button
+          <motion.button
             key={f}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-body font-medium transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-sm font-body font-medium transition-all ${
               filter === f
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-card border border-border text-muted-foreground"
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                : "glass text-muted-foreground"
             }`}
           >
             {f === "todas" ? "Todas" : f === "individual" ? "Individual" : "Casal"}
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -120,10 +122,11 @@ const Missions = () => {
                 <motion.div
                   key={m.id}
                   layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="relative bg-card border border-border rounded-2xl p-4 shadow-[var(--shadow-card)]"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  whileHover={{ y: -2 }}
+                  className="relative glass rounded-2xl p-4"
                 >
                   <div className="flex items-start gap-3">
                     <button
@@ -192,12 +195,12 @@ const Missions = () => {
             onClick={() => setShowCreate(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-card rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl"
+              className="glass rounded-3xl w-full max-w-md p-6 space-y-4 !bg-opacity-95"
             >
               <div className="flex items-center justify-between">
                 <h2 className="font-display font-bold text-lg text-foreground">Nova Missão</h2>

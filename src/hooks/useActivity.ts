@@ -21,7 +21,8 @@ export function useActivityData() {
       if (!profile?.couple_id || !couple) return [];
 
       const userIds = [couple.partner1_id, couple.partner2_id].filter(Boolean);
-      const twelveWeeksAgo = subDays(startOfDay(new Date()), 83); // 12 weeks including today
+      const today = startOfDay(new Date());
+      const twelveWeeksAgo = subDays(today, 83); // 12 weeks total including today
       const startDate = format(twelveWeeksAgo, 'yyyy-MM-dd');
 
       const { data, error } = await supabase
@@ -32,17 +33,25 @@ export function useActivityData() {
 
       if (error) throw error;
 
+      // Group by date string to avoid TZ issues
+      const completionsByDate = (data || []).reduce((acc: any, curr) => {
+        const dateStr = curr.completed_at; // it's already yyyy-MM-dd
+        acc[dateStr] = (acc[dateStr] || 0) + 1;
+        return acc;
+      }, {});
+
       // Map completions to specific days
       const days = eachDayOfInterval({
         start: twelveWeeksAgo,
-        end: startOfDay(new Date())
+        end: today
       });
 
       const processedData: DayActivity[][] = [];
       let currentWeek: DayActivity[] = [];
 
       days.forEach((day, index) => {
-        const missions = data.filter(c => isSameDay(new Date(c.completed_at), day)).length;
+        const dateKey = format(day, 'yyyy-MM-dd');
+        const missions = completionsByDate[dateKey] || 0;
         
         // Intensity level calculation (0 to 4)
         const level = missions === 0 ? 0 

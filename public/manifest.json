@@ -1,0 +1,17 @@
+{
+  "name": "LoveQuest",
+  "short_name": "LoveQuest",
+  "description": "Transforme hábitos em conquistas a dois",
+  "start_url": "/app",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ff4d6d",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -135,17 +135,19 @@ const Rewards = () => {
       {/* Tabs */}
       <div className="flex gap-2">
         {(["catalogo", "historico"] as const).map((t) => (
-          <button
+          <motion.button
             key={t}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => setTab(t)}
-            className={`px-4 py-1.5 rounded-full text-sm font-body font-medium transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-sm font-body font-medium transition-all ${
               tab === t
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-card border border-border text-muted-foreground"
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                : "glass text-muted-foreground"
             }`}
           >
             {t === "catalogo" ? "Catálogo" : "Histórico"}
-          </button>
+          </motion.button>
         ))}
       </div>
 
@@ -168,6 +170,8 @@ const Rewards = () => {
                   layout
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  whileHover={{ y: -4 }}
+                  className="glass rounded-2xl p-4 flex flex-col items-center text-center relative"
                 >
                   <div className="absolute top-2 right-2 flex gap-1">
                     {r.is_reusable && (
@@ -185,10 +189,10 @@ const Rewards = () => {
                     size="sm"
                     onClick={() => handleRedeem(r)}
                     disabled={!canAfford || redeemReward.isPending}
-                    className={`w-full font-display font-bold rounded-xl text-xs ${
+                    className={`w-full font-display font-bold rounded-xl text-xs transition-all ${
                       canAfford
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "bg-muted text-muted-foreground cursor-not-allowed"
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02]"
+                        : "bg-muted/50 text-muted-foreground cursor-not-allowed"
                     }`}
                   >
                     <Gift className="w-3 h-3 mr-1" />
@@ -216,7 +220,8 @@ const Rewards = () => {
                 layout
                 initial={justRedeemed === rd.id ? { opacity: 0, y: -20, scale: 0.95 } : false}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                className="bg-card border border-border rounded-2xl p-4 shadow-[var(--shadow-card)]"
+                whileHover={{ y: -2 }}
+                className="glass rounded-2xl p-4"
               >
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">{rd.emoji || "🎁"}</span>
@@ -326,12 +331,12 @@ const Rewards = () => {
             onClick={() => setConfirmRedeem(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-card rounded-3xl w-full max-w-sm p-6 text-center space-y-4 shadow-xl"
+              className="glass rounded-3xl w-full max-w-sm p-6 text-center space-y-4 !bg-opacity-95 shadow-2xl"
             >
               <span className="text-5xl block">{confirmRedeem.emoji || "🎁"}</span>
               <h2 className="font-display font-bold text-lg text-foreground">Resgatar recompensa?</h2>
@@ -377,12 +382,12 @@ const Rewards = () => {
             onClick={() => setShowCreate(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-card rounded-3xl w-full max-w-md p-6 space-y-4 shadow-2xl"
+              className="glass rounded-3xl w-full max-w-md p-6 space-y-4 !bg-opacity-95 shadow-2xl"
             >
               <div className="flex items-center justify-between">
                 <h2 className="font-display font-bold text-lg text-foreground">Nova Recompensa</h2>

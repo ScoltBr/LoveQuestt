@@ -1,4 +1,5 @@
 import { useProfile, useCouple } from "@/hooks/useProfile";
+import { motion, AnimatePresence } from "framer-motion";
 import { useCoupleStats } from "@/hooks/useCoupleStats";
 import { useActivityData, useAchievements } from "@/hooks/useActivity";
 import { useHabits, useCompletions } from "@/hooks/useHabits";
@@ -19,7 +20,7 @@ const levelColors = [
 const ActivityGrid = ({ data }: { data: any[][] }) => {
   if (!data || data.length === 0) return null;
   return (
-    <div className="bg-card border border-border rounded-2xl p-4">
+    <div className="glass rounded-2xl p-4">
       <h2 className="font-display font-bold text-foreground text-sm mb-3">Atividade da Semana</h2>
       <div className="overflow-x-auto">
         <div className="flex gap-1">
@@ -40,12 +41,14 @@ const ActivityGrid = ({ data }: { data: any[][] }) => {
                   <div
                     className={`w-[14px] h-[14px] rounded-[3px] ${levelColors[day.level]} transition-colors cursor-pointer`}
                   />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block z-50 pointer-events-none">
+                  <div className={`absolute left-1/2 -translate-x-1/2 hidden group-hover:block z-50 pointer-events-none ${di < 3 ? "top-full mt-1.5" : "bottom-full mb-1.5"
+                    }`}>
+                    {di < 3 && <div className="w-2 h-2 bg-foreground rotate-45 mx-auto -mb-1" />}
                     <div className="bg-foreground text-background text-[10px] font-body rounded-lg px-2.5 py-1.5 whitespace-nowrap shadow-lg">
                       <p className="font-bold">{day.date}</p>
                       <p>{day.missions} {day.missions === 1 ? "missão" : "missões"}</p>
                     </div>
-                    <div className="w-2 h-2 bg-foreground rotate-45 mx-auto -mt-1" />
+                    {di >= 3 && <div className="w-2 h-2 bg-foreground rotate-45 mx-auto -mt-1" />}
                   </div>
                 </div>
               ))}
@@ -107,10 +110,17 @@ const Stats = () => {
     <div className="px-4 pt-6 space-y-4 pb-4">
       <h1 className="text-2xl font-extrabold text-foreground">Estatísticas</h1>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="grid grid-cols-2 gap-3"
+      >
         {statCards.map((s) => (
-          <div key={s.label} className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3">
+          <motion.div 
+            key={s.label}
+            whileHover={{ y: -4 }}
+            className="glass rounded-2xl p-4 flex items-center gap-3"
+          >
             <div className={`w-10 h-10 rounded-xl ${s.color} flex items-center justify-center`}>
               <s.icon className="w-5 h-5" />
             </div>
@@ -118,12 +128,16 @@ const Stats = () => {
               <p className="font-display font-extrabold text-lg text-foreground">{s.value}</p>
               <p className="text-xs text-muted-foreground font-body">{s.label}</p>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Weekly goal */}
-      <div className="bg-card border border-border rounded-2xl p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-4"
+      >
         <h2 className="font-display font-bold text-foreground text-sm mb-3">Meta Semanal</h2>
         <div className="flex items-center gap-4">
           <ProgressRing progress={(weeklyGoal.completed / weeklyGoal.target) * 100} size={64}>
@@ -138,42 +152,50 @@ const Stats = () => {
             <p className="text-xs text-muted-foreground font-body">
               Recompensa: +{weeklyGoal.reward} XP
             </p>
-            <div className="w-full bg-muted rounded-full h-2 mt-2">
+            <div className="w-full bg-muted rounded-full h-2 mt-2 overflow-hidden">
               <div
                 className="h-2 rounded-full bg-secondary transition-all"
-                style={{ width: `${(weeklyGoal.completed / weeklyGoal.target) * 100}%` }}
+                style={{ width: `${Math.min((weeklyGoal.completed / weeklyGoal.target) * 100, 100)}%` }}
               />
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* GitHub-style activity grid */}
       <ActivityGrid data={activityData} />
 
       {/* Partner comparison */}
-      <div className="bg-card border border-border rounded-2xl p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-4"
+      >
         <h2 className="font-display font-bold text-foreground text-sm mb-3">Vocês Juntos</h2>
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2 text-primary font-display font-bold">
+            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2 text-primary font-display font-bold shadow-lg shadow-primary/10">
               {(profile?.name || "U")[0].toUpperCase()}
             </div>
             <p className="font-display font-bold text-sm text-foreground">{profile?.name || "Você"}</p>
             <p className="text-xs text-muted-foreground font-body">Nv {profile?.level || 1} · {profile?.xp || 0} XP</p>
           </div>
           <div className="text-center">
-            <div className="w-12 h-12 rounded-full bg-love/10 flex items-center justify-center mx-auto mb-2 text-love font-display font-bold">
+            <div className="w-12 h-12 rounded-full bg-love/20 flex items-center justify-center mx-auto mb-2 text-love font-display font-bold shadow-lg shadow-love/10">
               {(partnerData?.name || "?")[0].toUpperCase()}
             </div>
             <p className="font-display font-bold text-sm text-foreground">{partnerData?.name || "Parceiro"}</p>
             <p className="text-xs text-muted-foreground font-body">Nv {partnerData?.level || 1} · {partnerData?.xp || 0} XP</p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Achievements */}
-      <div className="bg-card border border-border rounded-2xl p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-4"
+      >
         <h2 className="font-display font-bold text-foreground text-sm mb-3 flex items-center gap-2">
           <Trophy className="w-4 h-4 text-warning" />
           Conquistas
@@ -182,19 +204,20 @@ const Stats = () => {
           {achievementsList.map((a) => {
             const isUnlocked = unlockedAchievements.some(ua => ua.title === a.title);
             return (
-              <div
+              <motion.div
                 key={a.title}
-                className={`flex flex-col items-center text-center gap-1 ${
-                  isUnlocked ? "" : "opacity-30 grayscale"
+                whileHover={isUnlocked ? { scale: 1.1, rotate: 5 } : {}}
+                className={`flex flex-col items-center text-center gap-1 transition-all ${
+                  isUnlocked ? "drop-shadow-md" : "opacity-20 grayscale"
                 }`}
               >
                 <span className="text-2xl">{a.emoji}</span>
-                <span className="text-[10px] font-body text-foreground leading-tight">{a.title}</span>
-              </div>
+                <span className="text-[10px] font-body text-foreground leading-tight font-medium">{a.title}</span>
+              </motion.div>
             );
           })}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

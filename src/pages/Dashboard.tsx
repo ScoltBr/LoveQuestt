@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { useVibration } from "@/hooks/useVibration";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ const Dashboard = () => {
   const { data: notifications = [] } = useNotifications();
   const markRead = useMarkNotificationsRead();
   const unreadCount = notifications.filter(n => !n.is_read).length;
+  const { success: vibrateSuccess, light: vibrateLight } = useVibration();
 
   const toggleNotifs = () => {
     if (!showNotifs && unreadCount > 0) {
@@ -54,6 +56,7 @@ const Dashboard = () => {
     if (habit) {
       setShowXpPop(id);
       setTimeout(() => setShowXpPop(null), 800);
+      vibrateSuccess();
       completeHabit.mutate({ habit, date: todayStr });
     }
   };
@@ -82,13 +85,13 @@ const Dashboard = () => {
         <Heart className="w-16 h-16 text-primary fill-primary animate-pulse" />
         <h2 className="text-2xl font-display font-extrabold text-foreground">Aguardando Parceiro(a)</h2>
         <p className="text-muted-foreground font-body text-sm max-w-xs">
-          Passo 1: Peça para seu parceiro(a) baixar o app ou acessar o site.<br/><br/>
+          Passo 1: Peça para seu parceiro(a) baixar o app ou acessar o site.<br /><br />
           Passo 2: Peça para ele(a) inserir o código abaixo na tela inicial de conexão.
         </p>
         <div className="flex items-center gap-2 bg-muted px-6 py-3 rounded-2xl my-4">
           <span className="font-mono text-3xl font-bold tracking-widest">{couple.invite_code}</span>
         </div>
-        <Button 
+        <Button
           className="w-full max-w-xs font-display font-bold rounded-xl mt-2"
           onClick={() => {
             navigator.clipboard.writeText(couple.invite_code || "");
@@ -97,8 +100,8 @@ const Dashboard = () => {
         >
           Copiar Código
         </Button>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="w-full max-w-xs text-muted-foreground hover:text-foreground font-body text-sm mt-4"
           onClick={cancelInvite}
         >
@@ -121,9 +124,11 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={toggleNotifs}
-            className="relative w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center"
+            className="relative w-10 h-10 rounded-full glass flex items-center justify-center transition-all"
           >
             <Bell className="w-5 h-5 text-muted-foreground" />
             {unreadCount > 0 && (
@@ -131,7 +136,7 @@ const Dashboard = () => {
                 {unreadCount}
               </span>
             )}
-          </button>
+          </motion.button>
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-sm">
             {(profile?.name || "U")[0].toUpperCase()}
           </div>
@@ -143,24 +148,23 @@ const Dashboard = () => {
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-border rounded-2xl p-4 shadow-[var(--shadow-card)] max-h-[300px] overflow-y-auto"
+          className="glass rounded-2xl p-4 shadow-xl max-h-[300px] overflow-y-auto"
         >
           <div className="flex items-center justify-between mb-4">
-             <h3 className="font-display font-bold text-sm text-foreground">Notificações</h3>
-             {notifications.length > 0 && (
-                <span className="text-[10px] text-muted-foreground font-body">Mais recentes</span>
-             )}
+            <h3 className="font-display font-bold text-sm text-foreground">Notificações</h3>
+            {notifications.length > 0 && (
+              <span className="text-[10px] text-muted-foreground font-body">Mais recentes</span>
+            )}
           </div>
-          
+
           <div className="space-y-4">
             {notifications.length > 0 ? (
               notifications.map((n) => (
                 <div key={n.id} className={`flex items-start gap-3 text-sm font-body ${n.is_read ? 'opacity-60' : ''}`}>
-                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                    n.type === 'mission' ? 'bg-primary' : 
-                    n.type === 'reward' ? 'bg-love' : 
-                    n.type === 'level' ? 'bg-success' : 'bg-muted'
-                  }`} />
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === 'mission' ? 'bg-primary' :
+                    n.type === 'reward' ? 'bg-love' :
+                      n.type === 'level' ? 'bg-success' : 'bg-muted'
+                    }`} />
                   <div className="flex-1 min-w-0">
                     <p className="text-foreground leading-tight text-xs">{n.content}</p>
                     <p className="text-[10px] text-muted-foreground mt-1">
@@ -178,9 +182,15 @@ const Dashboard = () => {
         </motion.div>
       )}
 
-      {/* Streak + Partner row */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="grid grid-cols-2 gap-3"
+      >
+        <motion.div
+          whileHover={{ y: -4 }}
+          className="glass rounded-2xl p-4 flex items-center gap-3"
+        >
           <div className="w-11 h-11 rounded-xl bg-streak/10 flex items-center justify-center">
             <Flame className="w-6 h-6 text-streak" />
           </div>
@@ -188,8 +198,11 @@ const Dashboard = () => {
             <p className="font-display font-extrabold text-xl text-foreground">{profile?.streak || 0}</p>
             <p className="text-xs text-muted-foreground font-body">dias seguidos</p>
           </div>
-        </div>
-        <div className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3">
+        </motion.div>
+        <motion.div
+          whileHover={{ y: -4 }}
+          className="glass rounded-2xl p-4 flex items-center gap-3"
+        >
           <div className="w-11 h-11 rounded-xl bg-love/10 flex items-center justify-center">
             <Heart className="w-5 h-5 text-love fill-love" />
           </div>
@@ -201,11 +214,15 @@ const Dashboard = () => {
               {partnerData ? `🔥 ${partnerData.streak} · Nv ${partnerData.level}` : "Convite pendente"}
             </p>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
 
       {/* Daily progress */}
-      <div className="bg-card border border-border rounded-2xl p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-4"
+      >
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-bold text-foreground text-sm">Progresso de Hoje</h2>
           <span className="text-sm font-display font-bold text-xp">+{todayXp} XP</span>
@@ -215,7 +232,7 @@ const Dashboard = () => {
             <span className="text-xs font-display font-bold text-foreground">{dailyProgress}%</span>
           </ProgressRing>
           <div className="flex-1">
-            <div className="w-full bg-muted rounded-full h-2.5">
+            <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
               <div
                 className="h-2.5 rounded-full bg-primary transition-all duration-500"
                 style={{ width: `${Math.min(dailyProgress, 100)}%` }}
@@ -226,10 +243,14 @@ const Dashboard = () => {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Today's missions */}
-      <div className="bg-card border border-border rounded-2xl p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-4"
+      >
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display font-bold text-foreground text-sm">Missões de Hoje</h2>
           <button
@@ -244,7 +265,8 @@ const Dashboard = () => {
             const isCompleted = completions.some(c => c.habit_id === m.id && c.user_id === profile?.id);
             return (
               <div key={m.id} className="relative flex items-center gap-3">
-                <button
+              <motion.button
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => toggleMission(m.id)}
                   disabled={isCompleted || completeHabit.isPending}
                   className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center text-xs transition-all ${isCompleted
@@ -253,7 +275,7 @@ const Dashboard = () => {
                     }`}
                 >
                   {isCompleted && "✓"}
-                </button>
+                </motion.button>
                 <div className="flex-1 min-w-0">
                   <p
                     className={`text-sm font-body ${isCompleted ? "text-muted-foreground line-through" : "text-foreground"
@@ -261,18 +283,17 @@ const Dashboard = () => {
                   >
                     {m.name}
                   </p>
-                  {m.type === "casal" &&                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-body">
-                        {m.type === 'casal' ? (
-                          <div className="flex -space-x-1.5">
-                            <div className="w-4 h-4 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-[8px] font-bold">{(profile?.name || "V")[0]}</div>
-                            <div className="w-4 h-4 rounded-full bg-love/20 border-2 border-card flex items-center justify-center text-[8px] font-bold">{(partnerData?.name || "?")[0]}</div>
-                          </div>
-                        ) : (
-                          <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold">{(profile?.name || "V")[0]}</div>
-                        )}
-                        {m.type === 'casal' ? "Casal" : "Individual"}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-body">
+                    {m.type === 'casal' ? (
+                      <div className="flex -space-x-1.5">
+                        <div className="w-4 h-4 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-[8px] font-bold">{(profile?.name || "V")[0]}</div>
+                        <div className="w-4 h-4 rounded-full bg-love/20 border-2 border-card flex items-center justify-center text-[8px] font-bold">{(partnerData?.name || "?")[0]}</div>
                       </div>
-                  }
+                    ) : (
+                      <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold">{(profile?.name || "V")[0]}</div>
+                    )}
+                    {m.type === 'casal' ? "Casal" : "Individual"}
+                  </div>
                 </div>
                 <span className="text-xs text-muted-foreground font-body">+{m.xp_value} XP</span>
                 {showXpPop === m.id && (
@@ -284,16 +305,19 @@ const Dashboard = () => {
             );
           })}
         </div>
-
-      </div>
+      </motion.div>
 
       {/* Weekly goal */}
-      <div className="bg-card border border-border rounded-2xl p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-4"
+      >
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-display font-bold text-foreground text-sm">Meta da Semana</h2>
           <XpBadge amount={weeklyGoal.reward} />
         </div>
-        <div className="w-full bg-muted rounded-full h-2.5 mb-1">
+        <div className="w-full bg-muted rounded-full h-2.5 mb-1 overflow-hidden">
           <div
             className="h-2.5 rounded-full bg-secondary transition-all duration-500"
             style={{ width: `${Math.min((weeklyGoal.completed / weeklyGoal.target) * 100, 100)}%` }}
@@ -302,10 +326,14 @@ const Dashboard = () => {
         <p className="text-xs text-muted-foreground font-body">
           {weeklyGoal.completed}/{weeklyGoal.target} missões concluídas
         </p>
-      </div>
+      </motion.div>
 
       {/* Relationship level */}
-      <div className="bg-card border border-border rounded-2xl p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-4"
+      >
         <div className="flex items-center gap-3 mb-2">
           <Heart className="w-5 h-5 text-love fill-love" />
           <div>
@@ -313,19 +341,19 @@ const Dashboard = () => {
             <p className="text-xs text-muted-foreground font-body">{relationshipLevel.name}</p>
           </div>
         </div>
-        <div className="w-full bg-muted rounded-full h-2.5 mb-1">
+        <div className="w-full bg-muted rounded-full h-2.5 mb-1 overflow-hidden">
           <div
             className="h-2.5 rounded-full bg-love transition-all duration-500"
             style={{ width: `${Math.min((relationshipLevel.xp / relationshipLevel.nextLevelXp) * 100, 100)}%` }}
           />
         </div>
         <p className="text-xs text-muted-foreground font-body">
-          {relationshipLevel.index < relationshipLevel.levels.length - 1 
+          {relationshipLevel.index < relationshipLevel.levels.length - 1
             ? `${relationshipLevel.xp}/${relationshipLevel.nextLevelXp} XP para "${relationshipLevel.levels[relationshipLevel.index + 1]}"`
             : "Nível Máximo Atingido! ❤️"
           }
         </p>
-      </div>
+      </motion.div>
 
       {/* Quick actions */}
       <div className="grid grid-cols-3 gap-3 pb-4">
@@ -334,16 +362,18 @@ const Dashboard = () => {
           { icon: Gift, label: "Recompensas", action: () => navigate("/app/recompensas"), color: "bg-xp/10 text-xp" },
           { icon: BarChart3, label: "Estatísticas", action: () => navigate("/app/stats"), color: "bg-secondary/10 text-secondary" },
         ].map((a) => (
-          <button
+          <motion.button
             key={a.label}
+            whileHover={{ scale: 1.05, y: -4 }}
+            whileTap={{ scale: 0.95 }}
             onClick={a.action}
-            className="bg-card border border-border rounded-2xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
+            className="glass rounded-2xl p-4 flex flex-col items-center gap-2 transition-all shadow-sm"
           >
             <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}>
               <a.icon className="w-5 h-5" />
             </div>
-            <span className="text-xs font-body font-medium text-foreground">{a.label}</span>
-          </button>
+            <span className="text-[10px] font-body font-medium text-foreground text-center uppercase tracking-tighter">{a.label}</span>
+          </motion.button>
         ))}
       </div>
     </div>

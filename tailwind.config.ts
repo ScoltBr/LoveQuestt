@@ -113,6 +113,19 @@ export default {
           "50%": { transform: "scale(1.2) translateY(-10px)", opacity: "1" },
           "100%": { transform: "scale(1) translateY(-20px)", opacity: "0" },
         },
+        "background-pan": {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        "scale-up": {
+          "0%": { transform: "scale(0.95)", opacity: "0" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -120,6 +133,12 @@ export default {
         "pulse-love": "pulse-love 2s ease-in-out infinite",
         "float": "float 3s ease-in-out infinite",
         "xp-pop": "xp-pop 0.8s ease-out forwards",
+        "background-pan": "background-pan 15s ease infinite",
+        "fade-in": "fade-in 0.5s ease-out forwards",
+        "scale-up": "scale-up 0.4s ease-out forwards",
+      },
+      backgroundImage: {
+        "mesh-gradient": "radial-gradient(at 0% 0%, hsla(347, 100%, 65%, 0.15) 0px, transparent 50%), radial-gradient(at 100% 0%, hsla(244, 76%, 58%, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, hsla(258, 90%, 66%, 0.15) 0px, transparent 50%), radial-gradient(at 0% 100%, hsla(25, 95%, 53%, 0.15) 0px, transparent 50%)",
       },
     },
   },

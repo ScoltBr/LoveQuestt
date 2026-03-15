@@ -145,6 +145,18 @@
   .font-body {
     font-family: var(--font-body);
   }
+
+  .glass {
+    @apply bg-white/70 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl;
+  }
+
+  .glass-morphism {
+    @apply bg-clip-padding backdrop-filter backdrop-blur-2xl bg-opacity-60 border border-white/20 dark:border-white/10;
+  }
+
+  .animated-mesh {
+    @apply bg-mesh-gradient bg-[length:400%_400%] animate-background-pan;
+  }
 }
 
 /* Smooth scrolling */

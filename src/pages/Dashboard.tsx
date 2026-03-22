@@ -62,7 +62,51 @@ const Dashboard = () => {
   };
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center p-4">Carregando perfil...</div>;
+    return (
+      <div className="px-4 pt-6 space-y-4">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-6 w-48 bg-muted animate-pulse rounded-md" />
+            <div className="h-4 w-24 bg-muted animate-pulse rounded-md" />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-muted animate-pulse" />
+            <div className="w-10 h-10 rounded-full bg-muted animate-pulse" />
+          </div>
+        </div>
+
+        {/* Top Cards Skeleton */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <div className="glass rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-muted animate-pulse" />
+            <div className="space-y-2 flex-1">
+              <div className="h-5 w-12 bg-muted animate-pulse rounded-md" />
+              <div className="h-3 w-20 bg-muted animate-pulse rounded-md" />
+            </div>
+          </div>
+          <div className="glass rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-muted animate-pulse" />
+            <div className="space-y-2 flex-1">
+              <div className="h-5 w-20 bg-muted animate-pulse rounded-md" />
+              <div className="h-3 w-24 bg-muted animate-pulse rounded-md" />
+            </div>
+          </div>
+        </div>
+
+        {/* Daily Progress Skeleton */}
+        <div className="glass rounded-2xl p-4 mt-4">
+          <div className="h-4 w-32 bg-muted animate-pulse rounded-md mb-4" />
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-muted animate-pulse shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="w-full bg-muted animate-pulse rounded-full h-2.5" />
+              <div className="h-3 w-32 bg-muted animate-pulse rounded-md" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (profile && !profile.couple_id) {
@@ -126,7 +170,8 @@ const Dashboard = () => {
         <div className="flex items-center gap-2">
           <motion.button
             whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
             onClick={toggleNotifs}
             className="relative w-10 h-10 rounded-full glass flex items-center justify-center transition-all"
           >
@@ -266,7 +311,8 @@ const Dashboard = () => {
             return (
               <div key={m.id} className="relative flex items-center gap-3">
               <motion.button
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.8 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
                   onClick={() => toggleMission(m.id)}
                   disabled={isCompleted || completeHabit.isPending}
                   className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center text-xs transition-all ${isCompleted
@@ -320,7 +366,7 @@ const Dashboard = () => {
         <div className="w-full bg-muted rounded-full h-2.5 mb-1 overflow-hidden">
           <div
             className="h-2.5 rounded-full bg-secondary transition-all duration-500"
-            style={{ width: `${Math.min((weeklyGoal.completed / weeklyGoal.target) * 100, 100)}%` }}
+            style={{ width: `${weeklyGoal.target > 0 ? Math.max(0, Math.min((weeklyGoal.completed / weeklyGoal.target) * 100, 100)) : 0}%` }}
           />
         </div>
         <p className="text-xs text-muted-foreground font-body">
@@ -344,7 +390,7 @@ const Dashboard = () => {
         <div className="w-full bg-muted rounded-full h-2.5 mb-1 overflow-hidden">
           <div
             className="h-2.5 rounded-full bg-love transition-all duration-500"
-            style={{ width: `${Math.min((relationshipLevel.xp / relationshipLevel.nextLevelXp) * 100, 100)}%` }}
+            style={{ width: `${relationshipLevel.nextLevelXp > 0 ? Math.max(0, Math.min((relationshipLevel.xp / relationshipLevel.nextLevelXp) * 100, 100)) : 0}%` }}
           />
         </div>
         <p className="text-xs text-muted-foreground font-body">
@@ -365,7 +411,8 @@ const Dashboard = () => {
           <motion.button
             key={a.label}
             whileHover={{ scale: 1.05, y: -4 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.92 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
             onClick={a.action}
             className="glass rounded-2xl p-4 flex flex-col items-center gap-2 transition-all shadow-sm"
           >

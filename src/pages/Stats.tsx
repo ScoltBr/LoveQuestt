@@ -140,7 +140,7 @@ const Stats = () => {
       >
         <h2 className="font-display font-bold text-foreground text-sm mb-3">Meta Semanal</h2>
         <div className="flex items-center gap-4">
-          <ProgressRing progress={(weeklyGoal.completed / weeklyGoal.target) * 100} size={64}>
+          <ProgressRing progress={weeklyGoal.target > 0 ? (weeklyGoal.completed / weeklyGoal.target) * 100 : 0} size={64}>
             <span className="text-sm font-display font-bold text-foreground">
               {weeklyGoal.completed}/{weeklyGoal.target}
             </span>
@@ -155,7 +155,7 @@ const Stats = () => {
             <div className="w-full bg-muted rounded-full h-2 mt-2 overflow-hidden">
               <div
                 className="h-2 rounded-full bg-secondary transition-all"
-                style={{ width: `${Math.min((weeklyGoal.completed / weeklyGoal.target) * 100, 100)}%` }}
+                style={{ width: `${weeklyGoal.target > 0 ? Math.max(0, Math.min((weeklyGoal.completed / weeklyGoal.target) * 100, 100)) : 0}%` }}
               />
             </div>
           </div>

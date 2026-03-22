@@ -147,15 +147,28 @@
   }
 
   .glass {
-    @apply bg-white/70 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl;
+    @apply bg-white/60 dark:bg-black/30 backdrop-blur-[24px] border border-white/40 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] saturate-[1.1] transition-all;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  }
+
+  .dark .glass {
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05), 0 8px 32px 0 rgba(0, 0, 0, 0.3);
   }
 
   .glass-morphism {
-    @apply bg-clip-padding backdrop-filter backdrop-blur-2xl bg-opacity-60 border border-white/20 dark:border-white/10;
+    @apply bg-white/40 dark:bg-black/20 backdrop-filter backdrop-blur-2xl border border-white/30 dark:border-white/5 saturate-150;
   }
 
   .animated-mesh {
     @apply bg-mesh-gradient bg-[length:400%_400%] animate-background-pan;
+    /* Adicionando sutil shift de hue para mais dinamismo */
+    animation: background-pan 15s ease infinite, smooth-hue 30s linear infinite;
+  }
+
+  @keyframes smooth-hue {
+    0% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(15deg); }
+    100% { filter: hue-rotate(0deg); }
   }
 }
 

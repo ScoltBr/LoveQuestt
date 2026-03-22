@@ -8,7 +8,11 @@ interface ProgressRingProps {
 const ProgressRing = ({ progress, size = 64, strokeWidth = 5, children }: ProgressRingProps) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const cappedProgress = Math.min(progress, 100);
+  
+  // Prevent NaN or Infinity and cap between 0 and 100
+  const validProgress = typeof progress === 'number' && !isNaN(progress) ? progress : 0;
+  const cappedProgress = Math.max(0, Math.min(validProgress, 100));
+  
   const offset = circumference - (cappedProgress / 100) * circumference;
 
   return (

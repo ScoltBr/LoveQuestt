@@ -6,9 +6,11 @@ import { useHabits, useCompletions, useCompleteHabit, useCreateHabit } from "@/h
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useProfile, useCouple } from "@/hooks/useProfile";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { missionTemplates, MissionTemplate } from "@/data/missionTemplates";
 
 const Missions = () => {
-  const [filter, setFilter] = useState<"todas" | "individual" | "casal">("todas");
+  const [filter, setFilter] = useState<"todas" | "individual" | "casal" | "privada">("todas");
   const [showCreate, setShowCreate] = useState(false);
   const [showXpPop, setShowXpPop] = useState<string | null>(null);
 
@@ -28,7 +30,16 @@ const Missions = () => {
   const [newDesc, setNewDesc] = useState("");
   const [newXp, setNewXp] = useState(20);
   const [newFreq, setNewFreq] = useState<"daily" | "weekly" | "monthly">("daily");
-  const [newType, setNewType] = useState<"individual" | "casal">("individual");
+  const [newType, setNewType] = useState<"individual" | "casal" | "privada">("individual");
+
+  const handleTemplateClick = (template: MissionTemplate) => {
+    setNewName(template.name);
+    setNewDesc(template.category);
+    setNewXp(template.xp_value);
+    setNewFreq(template.frequency);
+    setNewType(template.type);
+    setShowCreate(true);
+  };
 
   const filteredHabits = habits.filter((h) =>
     filter === "todas" ? true : h.type === filter
@@ -86,7 +97,7 @@ const Missions = () => {
 
       {/* Filters */}
       <div className="flex gap-2">
-        {(["todas", "individual", "casal"] as const).map((f) => (
+        {(["todas", "individual", "casal", "privada"] as const).map((f) => (
           <motion.button
             key={f}
             whileHover={{ scale: 1.05 }}
@@ -98,13 +109,39 @@ const Missions = () => {
                 : "glass text-muted-foreground"
             }`}
           >
-            {f === "todas" ? "Todas" : f === "individual" ? "Individual" : "Casal"}
+            {f === "todas" ? "Todas" : f === "individual" ? "Individual" : f === "casal" ? "Casal" : "Privada"}
           </motion.button>
         ))}
       </div>
 
+      {/* Quick Suggestions / Templates */}
+      <div className="space-y-2 mt-2">
+        <h2 className="text-sm font-display font-bold text-foreground mx-1">Sugestões Rápidas ✨</h2>
+        <ScrollArea className="w-full whitespace-nowrap pb-2">
+          <div className="flex w-max space-x-3 px-1">
+            {missionTemplates.map((template) => (
+              <motion.button
+                key={template.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleTemplateClick(template)}
+                className="glass rounded-xl p-3 flex flex-col items-start gap-1 min-w-[140px] text-left border-border/50 hover:border-primary transition-colors"
+              >
+                <div className="text-2xl mb-1">{template.icon}</div>
+                <p className="font-body font-medium text-sm text-foreground truncate w-full">{template.name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs font-display font-bold text-xp">+{template.xp_value} XP</span>
+                  <span className="text-[10px] text-muted-foreground">{template.type === 'casal' ? 'Casal' : 'Indiv.'}</span>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" className="hidden" />
+        </ScrollArea>
+      </div>
+
       {/* Mission list */}
-      <div className="space-y-3">
+      <div className="space-y-3 mt-4">
         {isLoading ? (
           <div className="flex justify-center py-8">
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -153,7 +190,7 @@ const Missions = () => {
                       )}
                       <div className="flex items-center gap-3 mt-2">
                         <span className="inline-flex items-center gap-1 text-xp text-xs font-display font-bold bg-xp/10 rounded-full px-2 py-0.5">
-                          +{m.xp_value} XP
+                          +{m.type === 'privada' ? 0 : m.xp_value} XP
                         </span>
                         <span className="text-xs text-muted-foreground font-body">
                           {m.frequency === "daily" ? "diária" : m.frequency === "weekly" ? "semanal" : "mensal"}
@@ -165,16 +202,18 @@ const Missions = () => {
                               <div className="w-4 h-4 rounded-full bg-love/20 border-2 border-card flex items-center justify-center text-[8px] font-bold">{(partnerData?.name || "?")[0]}</div>
                             </div>
                           ) : (
-                            <div className="w-4 h-4 rounded-full bg-primary/20 mr-1 flex items-center justify-center text-[8px] font-bold">{(profile?.name || "V")[0]}</div>
+                            <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold mr-1 border-2 border-card bg-primary/20">
+                              {m.type === 'privada' ? "🔒" : (profile?.name || "V")[0]}
+                            </div>
                           )}
-                          {m.type === 'casal' ? "Casal" : "Individual"}
+                          {m.type === 'casal' ? "Casal" : m.type === 'individual' ? "Individual" : "Privada"}
                         </span>
                       </div>
                     </div>
                   </div>
                   {showXpPop === m.id && (
                     <span className="absolute right-4 top-2 text-xp font-display font-bold text-base animate-xp-pop">
-                      +{m.xp_value} XP
+                      {m.type === 'privada' ? '🔒 Privada' : `+${m.xp_value} XP`}
                     </span>
                   )}
                 </motion.div>
@@ -239,20 +278,26 @@ const Missions = () => {
                   </select>
                 </div>
                 <div className="flex gap-2">
-                  {(["individual", "casal"] as const).map((t) => (
+                  {(["individual", "casal", "privada"] as const).map((t) => (
                     <button
                       key={t}
                       onClick={() => setNewType(t)}
-                      className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-body font-medium transition-colors border ${
+                      className={`flex-1 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-body font-medium transition-colors border ${
                         newType === t 
                           ? "bg-primary/20 text-primary border-primary/30" 
                           : "bg-background text-muted-foreground border-border hover:bg-accent"
                       }`}
                     >
-                      {t === "individual" ? "👤 Individual" : "👫 Casal"}
+                      {t === "individual" ? "👤 Indiv." : t === "casal" ? "👫 Casal" : "🔒 Privada"}
                     </button>
                   ))}
                 </div>
+                
+                {newType === "privada" && (
+                  <p className="text-xs text-muted-foreground text-center animate-in fade-in slide-in-from-top-1">
+                    Missões privadas são invisíveis para o seu parceiro(a) e não geram recompensas (0 XP).
+                  </p>
+                )}
               </div>
               <Button
                 className="w-full bg-primary text-primary-foreground font-display font-bold rounded-xl mt-4 h-12 shadow-[var(--shadow-love)]"

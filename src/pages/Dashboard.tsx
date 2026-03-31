@@ -336,15 +336,17 @@ const Dashboard = () => {
                         <div className="w-4 h-4 rounded-full bg-love/20 border-2 border-card flex items-center justify-center text-[8px] font-bold">{(partnerData?.name || "?")[0]}</div>
                       </div>
                     ) : (
-                      <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold">{(profile?.name || "V")[0]}</div>
+                      <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[8px] font-bold border-2 border-card mt-[-2px]">
+                        {m.type === 'privada' ? "🔒" : (profile?.name || "V")[0]}
+                      </div>
                     )}
-                    {m.type === 'casal' ? "Casal" : "Individual"}
+                    {m.type === 'casal' ? "Casal" : m.type === 'individual' ? "Individual" : "Privada"}
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground font-body">+{m.xp_value} XP</span>
+                <span className="text-xs text-muted-foreground font-body">+{m.type === 'privada' ? 0 : m.xp_value} XP</span>
                 {showXpPop === m.id && (
                   <span className="absolute right-0 -top-2 text-xp font-display font-bold text-sm animate-xp-pop">
-                    +{m.xp_value} XP
+                    {m.type === 'privada' ? '🔒 Privada' : `+${m.xp_value} XP`}
                   </span>
                 )}
               </div>

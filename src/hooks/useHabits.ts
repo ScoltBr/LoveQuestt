@@ -10,12 +10,13 @@ export interface Habit {
   user_id: string;
   name: string;
   frequency: 'daily' | 'weekly' | 'monthly';
-  type: 'individual' | 'casal';
+  type: 'individual' | 'casal' | 'privada';
   xp_value: number;
   is_active: boolean;
   emoji: string | null;
   category: string | null;
   created_at: string;
+  couple_id?: string | null;
 }
 
 export interface HabitCompletion {
@@ -36,6 +37,12 @@ export function useHabits() {
       if (!session?.user?.id) return [];
 
       let query = supabase.from('habits').select('*').eq('is_active', true);
+      
+      if (profile?.couple_id) {
+        query = query.or(`couple_id.eq.${profile.couple_id},user_id.eq.${session.user.id}`);
+      } else {
+        query = query.eq('user_id', session.user.id);
+      }
       
       const { data, error } = await query;
       if (error) throw error;
@@ -76,6 +83,8 @@ export function useCompleteHabit() {
     mutationFn: async ({ habit, date }: { habit: Habit; date: string }) => {
       if (!session?.user?.id || !profile) throw new Error("Não autenticado");
 
+      const xpToEarn = habit.type === 'privada' ? 0 : habit.xp_value;
+
       // 1. Inserir a completion
       const { error: completionError } = await supabase
         .from('habit_completions')
@@ -83,7 +92,7 @@ export function useCompleteHabit() {
           habit_id: habit.id,
           user_id: session.user.id,
           completed_at: date,
-          xp_earned: habit.xp_value,
+          xp_earned: xpToEarn,
         });
 
       if (completionError) throw completionError;
@@ -130,7 +139,7 @@ export function useCompleteHabit() {
 
       // 3. Atualizar Perfil (XP e Streak)
       // O Level é atualizado via Trigger no Banco de Dados
-      const newXp = (profile.xp || 0) + habit.xp_value;
+      const newXp = (profile.xp || 0) + xpToEarn;
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
@@ -191,7 +200,7 @@ export function useCompleteHabit() {
 
       // 7. Notificar parceiro(a)
       const partnerId = couple?.partner1_id === session.user.id ? couple?.partner2_id : couple?.partner1_id;
-      if (partnerId) {
+      if (partnerId && habit.type !== 'privada') {
         await supabase.from('notifications').insert({
           user_id: partnerId,
           type: 'mission',
@@ -199,13 +208,18 @@ export function useCompleteHabit() {
         });
       }
 
-      return { habit, newXp };
+      return { habit, newXp, xpToEarn };
     },
     onSuccess: (data, variables) => {
       playSuccess();
       queryClient.invalidateQueries({ queryKey: ['completions', variables.date] });
       queryClient.invalidateQueries({ queryKey: ['profile'] });
-      toast.success(`+${data.habit.xp_value} XP!`);
+      
+      if (data.xpToEarn > 0) {
+        toast.success(`+${data.xpToEarn} XP!`);
+      } else {
+        toast.success(`Missão Privada concluída! 🔒`);
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao concluir missão");
@@ -222,11 +236,14 @@ export function useCreateHabit() {
     mutationFn: async (habit: Omit<Habit, 'id' | 'user_id' | 'created_at'>) => {
       if (!session?.user?.id) throw new Error("Não autenticado");
 
+      const coupleIdForHabit = habit.type === 'privada' ? null : profile?.couple_id;
+
       const { data, error } = await supabase
         .from('habits')
         .insert({
           ...habit,
           user_id: session.user.id,
+          couple_id: coupleIdForHabit,
         })
         .select()
         .single();

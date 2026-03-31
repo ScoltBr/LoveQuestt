@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Plus, X, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
+import { Gift, Plus, X, CheckCircle2, Sparkles, Loader2, Star, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
@@ -21,10 +21,12 @@ const Rewards = () => {
   const partnerData = couple?.partner1?.id === profile?.id ? couple?.partner2 : couple?.partner1;
   const createReward = useCreateReward();
   const redeemReward = useRedeemReward();
+  const approveReward = useApproveReward();
+  const rejectReward = useRejectReward();
+  const completeReward = useCompleteReward();
 
   const userXp = profile?.xp || 0;
 
-  // Create reward form
   const [newName, setNewName] = useState("");
   const [newXp, setNewXp] = useState("");
   const [newEmoji, setNewEmoji] = useState("🎁");
@@ -32,18 +34,12 @@ const Rewards = () => {
 
   const emojiOptions = ["🎁", "💆", "🎬", "🍽️", "🍕", "☕", "❤️", "🎮", "🏖️", "🌹", "🍫", "🎵"];
 
-  const catalog = rewards.filter(r => (r.status === 'available' || !r.status) && !r.is_redeemed);
+  const catalog = rewards.filter(r => (r.status === "available" || !r.status) && !r.is_redeemed);
   const history = rewards.filter(r => r.is_redeemed);
-
-  const approveReward = useApproveReward();
-  const rejectReward = useRejectReward();
-  const completeReward = useCompleteReward();
 
   const handleRedeem = (reward: Reward) => {
     if (userXp < reward.cost) {
-      toast.error("XP insuficiente!", {
-        description: `Você precisa de ${reward.cost} XP, mas tem apenas ${userXp} XP.`,
-      });
+      toast.error("XP insuficiente!", { description: `Precisa de ${reward.cost} XP, você tem ${userXp}.` });
       return;
     }
     setConfirmRedeem(reward);
@@ -51,152 +47,133 @@ const Rewards = () => {
 
   const confirmRedemption = () => {
     if (!confirmRedeem) return;
-
     redeemReward.mutate(confirmRedeem, {
       onSuccess: () => {
         setJustRedeemed(confirmRedeem.id);
         setConfirmRedeem(null);
-
-        // Confetti celebration
-        const duration = 1500;
-        const end = Date.now() + duration;
+        const end = Date.now() + 1500;
         const frame = () => {
-          confetti({
-            particleCount: 3,
-            angle: 60,
-            spread: 55,
-            origin: { x: 0, y: 0.6 },
-            colors: ["#FF4D6D", "#8B5CF6", "#F59E0B", "#22C55E", "#4F46E5"],
-          });
-          confetti({
-            particleCount: 3,
-            angle: 120,
-            spread: 55,
-            origin: { x: 1, y: 0.6 },
-            colors: ["#FF4D6D", "#8B5CF6", "#F59E0B", "#22C55E", "#4F46E5"],
-          });
+          confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0, y: 0.6 }, colors: ["#FF4D6D", "#8B5CF6", "#F59E0B"] });
+          confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1, y: 0.6 }, colors: ["#FF4D6D", "#8B5CF6", "#F59E0B"] });
           if (Date.now() < end) requestAnimationFrame(frame);
         };
         frame();
-
-        setTimeout(() => setJustRedeemed(null), 2000);
-      }
+        setTimeout(() => setJustRedeemed(null), 2500);
+      },
     });
   };
 
   const handleCreate = () => {
-    if (!newName.trim() || !newXp.trim()) {
-      toast.error("Preencha todos os campos.");
-      return;
-    }
+    if (!newName.trim() || !newXp.trim()) { toast.error("Preencha todos os campos."); return; }
     const xpVal = parseInt(newXp);
-    if (isNaN(xpVal) || xpVal <= 0) {
-      toast.error("XP deve ser um número positivo.");
-      return;
-    }
-    
-    createReward.mutate({
-      name: newName.trim(),
-      cost: xpVal,
-      emoji: newEmoji,
-      is_reusable: isReusable
-    }, {
-      onSuccess: () => {
-        setNewName("");
-        setNewXp("");
-        setNewEmoji("🎁");
-        setIsReusable(false);
-        setShowCreate(false);
-      }
+    if (isNaN(xpVal) || xpVal <= 0) { toast.error("XP deve ser número positivo."); return; }
+    createReward.mutate({ name: newName.trim(), cost: xpVal, emoji: newEmoji, is_reusable: isReusable }, {
+      onSuccess: () => { setNewName(""); setNewXp(""); setNewEmoji("🎁"); setIsReusable(false); setShowCreate(false); }
     });
   };
 
   return (
-    <div className="px-4 pt-6 pb-4 space-y-4">
-      {/* Header with XP balance */}
+    <div className="px-4 pt-6 pb-28 space-y-5">
+
+      {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-foreground">Recompensas</h1>
-          <p className="text-sm font-body text-muted-foreground flex items-center gap-1 mt-0.5">
+          <h1 className="text-3xl font-display font-black text-foreground tracking-tight">Recompensas</h1>
+          <p className="text-sm font-body text-muted-foreground flex items-center gap-1.5 mt-0.5">
             <Sparkles className="w-3.5 h-3.5 text-xp" />
-            <span className="font-display font-bold text-xp">{userXp} XP</span> disponível
+            <span className="font-black text-xp" style={{ textShadow: "0 0 10px hsl(var(--xp)/0.6)" }}>{userXp} XP</span>
+            <span>disponível</span>
           </p>
         </div>
-        <Button
-          size="sm"
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.92 }}
           onClick={() => setShowCreate(true)}
-          className="bg-primary text-primary-foreground font-display font-bold rounded-xl shadow-[var(--shadow-love)]"
+          className="flex items-center gap-1.5 bg-primary text-white px-4 py-2.5 rounded-2xl font-display font-black text-sm shadow-[0_0_16px_hsl(var(--primary)/0.4)]"
         >
-          <Plus className="w-4 h-4 mr-1" />
-          Criar
-        </Button>
+          <Plus className="w-4 h-4" /> Criar
+        </motion.button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2">
-        {(["catalogo", "historico"] as const).map((t) => (
+      {/* TABS */}
+      <div className="flex gap-2 p-1 glass rounded-2xl">
+        {(["catalogo", "historico"] as const).map(t => (
           <motion.button
             key={t}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
             onClick={() => setTab(t)}
-            className={`px-4 py-1.5 rounded-full text-sm font-body font-medium transition-all ${
+            className={`flex-1 py-2.5 rounded-xl text-sm font-display font-black transition-all ${
               tab === t
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                : "glass text-muted-foreground"
+                ? "bg-primary text-white shadow-[0_0_10px_hsl(var(--primary)/0.5)]"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            {t === "catalogo" ? "Catálogo" : "Histórico"}
+            {t === "catalogo" ? "🎁 Catálogo" : "📜 Histórico"}
           </motion.button>
         ))}
       </div>
 
+      {/* CATALOG / HISTORY */}
       {isLoading ? (
-        <div className="flex justify-center py-8">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="glass rounded-3xl p-4 space-y-3">
+              <div className="w-12 h-12 bg-muted animate-pulse rounded-2xl mx-auto" />
+              <div className="h-4 w-3/4 bg-muted animate-pulse rounded-lg mx-auto" />
+              <div className="h-3 w-1/2 bg-muted animate-pulse rounded mx-auto" />
+              <div className="h-9 bg-muted animate-pulse rounded-xl" />
+            </div>
+          ))}
         </div>
       ) : tab === "catalogo" ? (
         catalog.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground font-body text-sm">
-            Nenhuma recompensa disponível.
+          <div className="flex flex-col items-center py-16 text-center gap-3">
+            <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center text-3xl">🎁</div>
+            <p className="text-muted-foreground text-sm">Nenhuma recompensa ainda.</p>
+            <button onClick={() => setShowCreate(true)} className="text-primary text-sm font-black underline underline-offset-2">Criar primeira recompensa</button>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {catalog.map((r) => {
+            {catalog.map(r => {
               const canAfford = userXp >= r.cost;
               return (
                 <motion.div
                   key={r.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  whileHover={{ y: -4 }}
-                  className="glass rounded-2xl p-4 flex flex-col items-center text-center relative"
+                  whileHover={{ y: -4, scale: 1.02 }}
+                  className="glass rounded-3xl p-4 flex flex-col items-center text-center relative overflow-hidden"
                 >
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    {r.is_reusable && (
-                       <span className="text-[9px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-md border border-primary/20">
-                          Fixa
-                       </span>
-                    )}
-                  </div>
-                  <span className="text-3xl mb-2 mt-2">{r.emoji || "🎁"}</span>
-                  <p className="font-display font-bold text-foreground text-sm mb-1">{r.name}</p>
-                  <span className="text-xs font-display font-bold text-xp bg-xp/10 rounded-full px-2 py-0.5 mb-3">
+                  {/* Glow background */}
+                  <div className={`absolute inset-0 rounded-3xl transition-opacity ${canAfford ? "opacity-100" : "opacity-0"}`}
+                    style={{ background: "radial-gradient(circle at 50% 30%, hsl(var(--primary)/0.06), transparent 70%)" }} />
+
+                  {r.is_reusable && (
+                    <div className="absolute top-2.5 right-2.5">
+                      <Repeat className="w-3 h-3 text-primary/60" />
+                    </div>
+                  )}
+
+                  <span className="text-4xl mt-2 mb-3 relative z-10">{r.emoji || "🎁"}</span>
+                  <p className="font-display font-black text-foreground text-sm mb-2 relative z-10 leading-tight">{r.name}</p>
+                  <span
+                    className="text-xs font-black text-xp mb-4 relative z-10"
+                    style={{ textShadow: "0 0 8px hsl(var(--xp)/0.5)" }}
+                  >
                     {r.cost} XP
                   </span>
                   <Button
                     size="sm"
                     onClick={() => handleRedeem(r)}
                     disabled={!canAfford || redeemReward.isPending}
-                    className={`w-full font-display font-bold rounded-xl text-xs transition-all ${
+                    className={`w-full font-display font-black rounded-2xl text-xs h-9 relative z-10 transition-all ${
                       canAfford
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-[1.02]"
-                        : "bg-muted/50 text-muted-foreground cursor-not-allowed"
+                        ? "bg-primary text-white shadow-[0_0_14px_hsl(var(--primary)/0.4)] hover:scale-[1.03]"
+                        : "bg-muted/50 text-muted-foreground"
                     }`}
                   >
                     <Gift className="w-3 h-3 mr-1" />
-                    {canAfford ? "Resgatar" : "XP insuficiente"}
+                    {canAfford ? "Resgatar" : "Falta XP"}
                   </Button>
                 </motion.div>
               );
@@ -206,164 +183,141 @@ const Rewards = () => {
       ) : (
         <div className="space-y-3">
           {history.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground font-body text-sm">
-              Nenhum resgate ainda.
+            <div className="flex flex-col items-center py-16 gap-3">
+              <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center text-3xl">📜</div>
+              <p className="text-muted-foreground text-sm text-center">Nenhum resgate ainda.</p>
             </div>
           )}
-          {history.map((rd) => {
+          {history.map(rd => {
             const dateStr = rd.redeemed_at ? format(new Date(rd.redeemed_at), "dd 'de' MMM, HH:mm", { locale: ptBR }) : "";
-            const redeemerName = rd.created_by === profile?.id ? partnerData?.name : profile?.name; // A bit hacky guess on who redeemed, assuming partner created it
-            
             return (
               <motion.div
                 key={rd.id}
                 layout
                 initial={justRedeemed === rd.id ? { opacity: 0, y: -20, scale: 0.95 } : false}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                whileHover={{ y: -2 }}
-                className="glass rounded-2xl p-4"
+                className="glass rounded-3xl p-4"
               >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">{rd.emoji || "🎁"}</span>
+                <div className="flex items-start gap-4">
+                  <span className="text-3xl shrink-0 mt-0.5">{rd.emoji || "🎁"}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-display font-bold text-foreground text-sm">{rd.name}</p>
-                    <p className="text-xs text-muted-foreground font-body">
-                      {rd.cost} XP · {dateStr}
-                    </p>
+                    <p className="font-display font-black text-foreground text-sm">{rd.name}</p>
+                    <p className="text-xs text-muted-foreground font-body mt-0.5">{rd.cost} XP · {dateStr}</p>
+                    
+                    {/* Status context */}
+                    {rd.status === "pending" && profile?.id !== rd.redeemed_by && (
+                      <p className="text-[10px] text-primary font-bold mt-1.5">Seu parceiro quer esta recompensa!</p>
+                    )}
+                    {rd.status === "approved" && profile?.id !== rd.redeemed_by && (
+                      <p className="text-[10px] text-success font-bold mt-1.5">Aguardando você entregar! 🎁</p>
+                    )}
+                    {rd.status === "approved" && profile?.id === rd.redeemed_by && (
+                      <p className="text-[10px] text-muted-foreground italic mt-1.5">Aprovado! Aguarde a entrega.</p>
+                    )}
                   </div>
-                  
-                  {/* Status Badges & Actions */}
-                  {rd.status === 'pending' ? (
-                    profile?.id === rd.redeemed_by ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-1 rounded-full bg-xp/10 text-xp animate-pulse">
-                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                        Aguardando...
+
+                  {/* STATUS BADGE / ACTIONS */}
+                  <div className="shrink-0 flex flex-col items-end gap-1.5">
+                    {rd.status === "pending" ? (
+                      profile?.id === rd.redeemed_by ? (
+                        <span className="text-[10px] font-black px-2 py-1 rounded-full bg-warning/10 text-warning flex items-center gap-1">
+                          <Loader2 className="w-2.5 h-2.5 animate-spin" /> Pendente
+                        </span>
+                      ) : (
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => rejectReward.mutate(rd)}
+                            disabled={rejectReward.isPending}
+                            className="h-8 px-2.5 text-[10px] font-black text-destructive bg-destructive/10 rounded-xl border border-destructive/20 hover:bg-destructive/20 transition-colors"
+                          >
+                            Rejeitar
+                          </button>
+                          <button
+                            onClick={() => approveReward.mutate(rd)}
+                            disabled={approveReward.isPending}
+                            className="h-8 px-2.5 text-[10px] font-black text-success-foreground bg-success rounded-xl shadow-[0_0_8px_hsl(var(--success)/0.4)] hover:opacity-90 transition-opacity"
+                          >
+                            Aprovar
+                          </button>
+                        </div>
+                      )
+                    ) : rd.status === "approved" ? (
+                      profile?.id === rd.redeemed_by ? (
+                        <span className="text-[10px] font-black px-2 py-1 rounded-full bg-success/10 text-success flex items-center gap-1">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Aprovado
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => completeReward.mutate(rd)}
+                          disabled={completeReward.isPending}
+                          className="h-8 px-3 text-[10px] font-black text-white bg-primary rounded-xl shadow-[0_0_10px_hsl(var(--primary)/0.4)] hover:opacity-90"
+                        >
+                          Entreguei ✓
+                        </button>
+                      )
+                    ) : rd.status === "rejected" ? (
+                      <span className="text-[10px] font-black px-2 py-1 rounded-full bg-destructive/10 text-destructive flex items-center gap-1">
+                        <X className="w-2.5 h-2.5" /> Rejeitado
                       </span>
                     ) : (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => rejectReward.mutate(rd)}
-                          disabled={rejectReward.isPending}
-                          className="h-8 px-2 text-[10px] font-bold text-destructive border-destructive/20 hover:bg-destructive/5 rounded-lg"
-                        >
-                          Rejeitar
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => approveReward.mutate(rd)}
-                          disabled={approveReward.isPending}
-                          className="h-8 px-2 text-[10px] font-bold bg-success text-success-foreground hover:bg-success/90 rounded-lg"
-                        >
-                          Aprovar
-                        </Button>
-                      </div>
-                    )
-                  ) : rd.status === 'approved' ? (
-                    profile?.id === rd.redeemed_by ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-1 rounded-full bg-success/10 text-success">
-                        <CheckCircle2 className="w-2.5 h-2.5" />
-                        Aprovado
+                      <span className="text-[10px] font-black px-2 py-1 rounded-full bg-success/10 text-success flex items-center gap-1">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Entregue
                       </span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={() => completeReward.mutate(rd)}
-                        disabled={completeReward.isPending}
-                        className="h-8 px-2 text-[10px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg shadow-sm"
-                      >
-                        Marcar como concluído
-                      </Button>
-                    )
-                  ) : rd.status === 'rejected' ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-1 rounded-full bg-destructive/10 text-destructive">
-                      <X className="w-2.5 h-2.5" />
-                      Rejeitado
-                    </span>
-                  ) : (
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-body font-bold px-2 py-1 rounded-full bg-secondary/10 text-secondary`}>
-                      <CheckCircle2 className="w-2.5 h-2.5" />
-                      Concluído
-                    </span>
-                  )}
+                    )}
+                  </div>
                 </div>
-                {rd.status === 'pending' && profile?.id !== rd.redeemed_by && (
-                   <div className="mt-3 pt-3 border-t border-border/50 text-center">
-                      <p className="text-[10px] text-muted-foreground font-body">
-                         Seu parceiro(a) quer resgatar esta recompensa!
-                      </p>
-                   </div>
-                )}
-                {rd.status === 'approved' && profile?.id !== rd.redeemed_by && (
-                   <div className="mt-3 pt-3 border-t border-border/50 text-center">
-                      <p className="text-[10px] text-primary font-body font-semibold">
-                         Aguardando você entregar a recompensa! 🎁
-                      </p>
-                   </div>
-                )}
-                {rd.status === 'approved' && profile?.id === rd.redeemed_by && (
-                   <div className="mt-3 pt-3 border-t border-border/50 text-center">
-                      <p className="text-[10px] text-muted-foreground font-body italic">
-                         Aprovado! Aguarde seu parceiro(a) entregar.
-                      </p>
-                   </div>
-                )}
-                {rd.status === 'rejected' && (
-                   <p className="text-[9px] text-muted-foreground font-body mt-2 italic">
-                      O XP foi devolvido para quem solicitou.
-                   </p>
-                )}
               </motion.div>
             );
           })}
         </div>
       )}
 
-      {/* Confirm Redeem Modal */}
+      {/* CONFIRM REDEEM MODAL */}
       <AnimatePresence>
         {confirmRedeem && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center px-6"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-6"
             onClick={() => setConfirmRedeem(null)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="glass rounded-3xl w-full max-w-sm p-6 text-center space-y-4 !bg-opacity-95 shadow-2xl"
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-sm bg-card border border-border/50 rounded-[28px] p-7 text-center space-y-5 shadow-2xl"
             >
-              <span className="text-5xl block">{confirmRedeem.emoji || "🎁"}</span>
-              <h2 className="font-display font-bold text-lg text-foreground">Resgatar recompensa?</h2>
-              <p className="text-sm text-muted-foreground font-body">
-                Você vai gastar <span className="font-bold text-xp">{confirmRedeem.cost} XP</span> para resgatar{" "}
-                <span className="font-bold text-foreground">{confirmRedeem.name}</span>.<br/><br/>
-                <span className="text-xs italic text-primary font-semibold">Seu parceiro precisará aprovar o resgate.</span>
-              </p>
-              <div className="flex gap-3 pt-2">
+              <div className="w-20 h-20 bg-primary/10 rounded-[22px] flex items-center justify-center mx-auto border border-primary/20">
+                <span className="text-5xl">{confirmRedeem.emoji || "🎁"}</span>
+              </div>
+              <div>
+                <h2 className="font-display font-black text-xl text-foreground mb-2">{confirmRedeem.name}</h2>
+                <p className="text-sm text-muted-foreground font-body leading-relaxed">
+                  Você vai gastar{" "}
+                  <span className="font-black text-xp" style={{ textShadow: "0 0 8px hsl(var(--xp)/0.5)" }}>
+                    {confirmRedeem.cost} XP
+                  </span>{" "}
+                  e seu parceiro precisará aprovar o resgate.
+                </p>
+              </div>
+              <div className="flex gap-3">
                 <Button
                   variant="outline"
                   onClick={() => setConfirmRedeem(null)}
-                  className="flex-1 font-display font-bold rounded-xl"
+                  className="flex-1 font-display font-black rounded-2xl border-border/60"
                   disabled={redeemReward.isPending}
                 >
                   Cancelar
                 </Button>
                 <Button
                   onClick={confirmRedemption}
-                  className="flex-1 bg-primary text-primary-foreground font-display font-bold rounded-xl shadow-[var(--shadow-love)]"
+                  className="flex-1 bg-primary text-white font-display font-black rounded-2xl shadow-[0_0_16px_hsl(var(--primary)/0.4)]"
                   disabled={redeemReward.isPending}
                 >
-                  {redeemReward.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                    <>
-                      <Gift className="w-4 h-4 mr-1" /> Confirmar
-                    </>
-                  )}
+                  {redeemReward.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Gift className="w-4 h-4 mr-1" /> Confirmar</>}
                 </Button>
               </div>
             </motion.div>
@@ -371,41 +325,41 @@ const Rewards = () => {
         )}
       </AnimatePresence>
 
-      {/* Create Modal */}
+      {/* CREATE MODAL */}
       <AnimatePresence>
         {showCreate && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center px-4"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pb-4"
             onClick={() => setShowCreate(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="glass rounded-3xl w-full max-w-md p-6 space-y-4 !bg-opacity-95 shadow-2xl"
+              initial={{ y: 60, opacity: 0, scale: 0.96 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 60, opacity: 0, scale: 0.96 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md bg-card border border-border/50 rounded-[28px] p-6 space-y-5 shadow-2xl"
             >
               <div className="flex items-center justify-between">
-                <h2 className="font-display font-bold text-lg text-foreground">Nova Recompensa</h2>
-                <button onClick={() => setShowCreate(false)}>
-                  <X className="w-5 h-5 text-muted-foreground" />
+                <h2 className="font-display font-black text-xl text-foreground">Nova Recompensa</h2>
+                <button onClick={() => setShowCreate(false)} className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
+                  <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
 
-              {/* Emoji picker */}
+              {/* EMOJI GRID */}
               <div>
-                <p className="text-xs font-body text-muted-foreground mb-2">Escolha um emoji</p>
+                <p className="text-xs font-black text-muted-foreground mb-2 uppercase tracking-widest">Emoji</p>
                 <div className="flex flex-wrap gap-2">
-                  {emojiOptions.map((e) => (
+                  {emojiOptions.map(e => (
                     <button
                       key={e}
                       onClick={() => setNewEmoji(e)}
-                      className={`text-2xl w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                        newEmoji === e ? "bg-primary/10 ring-2 ring-primary scale-110" : "bg-card border border-border hover:bg-accent"
+                      className={`text-2xl w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
+                        newEmoji === e ? "bg-primary/15 ring-2 ring-primary scale-110 shadow-[0_0_10px_hsl(var(--primary)/0.3)]" : "bg-muted/30 hover:bg-muted/60 border border-border/50"
                       }`}
                     >
                       {e}
@@ -416,40 +370,45 @@ const Rewards = () => {
 
               <div className="space-y-3">
                 <input
-                  placeholder="Nome da recompensa"
+                  placeholder="Nome da recompensa *"
                   value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  onChange={e => setNewName(e.target.value)}
+                  className="w-full bg-muted/30 border border-border rounded-2xl px-4 py-3.5 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 />
-                <input
-                  placeholder="Custo em XP (ex: 80)"
-                  type="number"
-                  value={newXp}
-                  onChange={(e) => setNewXp(e.target.value)}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
+                <div className="relative">
+                  <Star className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-xp" />
+                  <input
+                    placeholder="Custo em XP"
+                    type="number"
+                    value={newXp}
+                    onChange={e => setNewXp(e.target.value)}
+                    className="w-full bg-muted/30 border border-border rounded-2xl pl-9 pr-4 py-3.5 text-sm font-body text-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-between bg-muted/50 p-3 rounded-xl">
-                 <div className="flex-1">
-                    <p className="text-xs font-display font-bold text-foreground">Recompensa Reutilizável</p>
-                    <p className="text-[10px] text-muted-foreground font-body">Não some do catálogo após o uso</p>
-                 </div>
-                 <button 
-                  type="button"
+              {/* REUSABLE TOGGLE */}
+              <div className="flex items-center justify-between bg-muted/20 border border-border/50 p-4 rounded-2xl">
+                <div>
+                  <p className="text-sm font-display font-black text-foreground flex items-center gap-2">
+                    <Repeat className="w-4 h-4 text-primary" /> Reutilizável
+                  </p>
+                  <p className="text-[10px] text-muted-foreground font-body mt-0.5">Não some do catálogo após o uso</p>
+                </div>
+                <button
                   onClick={() => setIsReusable(!isReusable)}
-                  className={`w-10 h-5 rounded-full transition-colors relative ${isReusable ? 'bg-primary' : 'bg-muted'}`}
-                 >
-                    <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${isReusable ? 'translate-x-5' : 'translate-x-0'}`} />
-                 </button>
+                  className={`w-12 h-6 rounded-full transition-all relative ${isReusable ? "bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]" : "bg-muted"}`}
+                >
+                  <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${isReusable ? "translate-x-6" : "translate-x-0"}`} />
+                </button>
               </div>
 
               <Button
-                className="w-full h-12 bg-primary text-primary-foreground font-display font-bold rounded-xl mt-4 shadow-[var(--shadow-love)]"
+                className="w-full h-13 py-4 bg-primary text-white font-display font-black rounded-2xl shadow-[0_0_20px_hsl(var(--primary)/0.35)] text-sm uppercase tracking-wide"
                 onClick={handleCreate}
                 disabled={!newName.trim() || createReward.isPending}
               >
-                {createReward.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Criar Recompensa"}
+                {createReward.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Criar Recompensa 🎁"}
               </Button>
             </motion.div>
           </motion.div>

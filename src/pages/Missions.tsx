@@ -1,13 +1,20 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Users, User as UserIcon, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, Lock, Users, User, Zap, Calendar, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHabits, useCompletions, useCompleteHabit, useCreateHabit } from "@/hooks/useHabits";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useProfile, useCouple } from "@/hooks/useProfile";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { missionTemplates, MissionTemplate } from "@/data/missionTemplates";
+
+const typeConfig = {
+  individual: { label: "Individual", icon: User, color: "text-primary", bg: "bg-primary/10", border: "border-primary/20", glow: "hsl(var(--primary)/0.5)" },
+  casal:      { label: "Casal",      icon: Users, color: "text-love",    bg: "bg-love/10",    border: "border-love/20",    glow: "hsl(var(--love)/0.5)" },
+  privada:    { label: "Privada",    icon: Lock,  color: "text-muted-foreground", bg: "bg-muted/20", border: "border-border", glow: "transparent" },
+} as const;
+
+const freqLabel = { daily: "Diária", weekly: "Semanal", monthly: "Mensal" } as const;
 
 const Missions = () => {
   const [filter, setFilter] = useState<"todas" | "individual" | "casal" | "privada">("todas");
@@ -15,7 +22,7 @@ const Missions = () => {
   const [showXpPop, setShowXpPop] = useState<string | null>(null);
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
-  
+
   const { data: profile } = useProfile();
   const { data: couple } = useCouple(profile?.couple_id || null);
   const partnerData = couple?.partner1?.id === profile?.id ? couple?.partner2 : couple?.partner1;
@@ -25,113 +32,99 @@ const Missions = () => {
   const completeHabit = useCompleteHabit();
   const createHabit = useCreateHabit();
 
-  // Create form state
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newXp, setNewXp] = useState(20);
   const [newFreq, setNewFreq] = useState<"daily" | "weekly" | "monthly">("daily");
   const [newType, setNewType] = useState<"individual" | "casal" | "privada">("individual");
 
-  const handleTemplateClick = (template: MissionTemplate) => {
-    setNewName(template.name);
-    setNewDesc(template.category);
-    setNewXp(template.xp_value);
-    setNewFreq(template.frequency);
-    setNewType(template.type);
+  const handleTemplateClick = (t: MissionTemplate) => {
+    setNewName(t.name);
+    setNewDesc(t.category);
+    setNewXp(t.xp_value);
+    setNewFreq(t.frequency);
+    setNewType(t.type);
     setShowCreate(true);
   };
 
-  const filteredHabits = habits.filter((h) =>
-    filter === "todas" ? true : h.type === filter
-  );
+  const filteredHabits = habits.filter(h => filter === "todas" ? true : h.type === filter);
 
   const toggleMission = (habitId: string) => {
-    const isCompleted = completions.some(c => c.habit_id === habitId && c.user_id === profile?.id);
-    if (isCompleted) return; // Already completed today
-
+    if (completions.some(c => c.habit_id === habitId && c.user_id === profile?.id)) return;
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
-
     setShowXpPop(habitId);
-    setTimeout(() => setShowXpPop(null), 800);
-
+    setTimeout(() => setShowXpPop(null), 900);
     completeHabit.mutate({ habit, date: todayStr });
   };
 
   const handleCreate = () => {
     if (!newName.trim()) return;
-    createHabit.mutate(
-      {
-        name: newName,
-        category: newDesc,
-        xp_value: newXp,
-        frequency: newFreq,
-        type: newType,
-        is_active: true,
-        emoji: null,
-      },
-      {
-        onSuccess: () => {
-          setShowCreate(false);
-          setNewName("");
-          setNewDesc("");
-          setNewXp(20);
-        }
-      }
-    );
+    createHabit.mutate({ name: newName, category: newDesc, xp_value: newXp, frequency: newFreq, type: newType, is_active: true, emoji: null }, {
+      onSuccess: () => { setShowCreate(false); setNewName(""); setNewDesc(""); setNewXp(20); }
+    });
   };
 
+  const completedToday = completions.filter(c => c.user_id === profile?.id).length;
+  const totalActive = habits.length;
+
   return (
-    <div className="px-4 pt-6 space-y-4">
+    <div className="px-4 pt-6 pb-28 space-y-5">
+
+      {/* HEADER */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-foreground">Missões</h1>
-        <Button
-          size="sm"
+        <div>
+          <h1 className="text-3xl font-display font-black text-foreground tracking-tight">Missões</h1>
+          <p className="text-xs text-muted-foreground mt-0.5 font-body">
+            <span className="font-black text-foreground">{completedToday}</span>/{totalActive} concluídas hoje
+          </p>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.92 }}
           onClick={() => setShowCreate(true)}
-          className="bg-primary text-primary-foreground font-display font-bold rounded-xl shadow-[var(--shadow-love)]"
+          className="flex items-center gap-1.5 bg-primary text-primary-foreground px-4 py-2.5 rounded-2xl font-display font-black text-sm shadow-[0_0_16px_hsl(var(--primary)/0.4)]"
         >
-          <Plus className="w-4 h-4 mr-1" />
-          Criar
-        </Button>
+          <Plus className="w-4 h-4" /> Criar
+        </motion.button>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2">
-        {(["todas", "individual", "casal", "privada"] as const).map((f) => (
+      {/* FILTER PILLS */}
+      <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+        {(["todas", "individual", "casal", "privada"] as const).map(f => (
           <motion.button
             key={f}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileTap={{ scale: 0.93 }}
             onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-body font-medium transition-all ${
+            className={`shrink-0 px-4 py-2 rounded-full text-xs font-display font-black transition-all ${
               filter === f
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                : "glass text-muted-foreground"
+                ? "bg-primary text-white shadow-[0_0_12px_hsl(var(--primary)/0.5)]"
+                : "glass text-muted-foreground hover:text-foreground"
             }`}
           >
-            {f === "todas" ? "Todas" : f === "individual" ? "Individual" : f === "casal" ? "Casal" : "Privada"}
+            {f === "todas" ? "✦ Todas" : f === "individual" ? "👤 Individual" : f === "casal" ? "👫 Casal" : "🔒 Privada"}
           </motion.button>
         ))}
       </div>
 
-      {/* Quick Suggestions / Templates */}
-      <div className="space-y-2 mt-2">
-        <h2 className="text-sm font-display font-bold text-foreground mx-1">Sugestões Rápidas ✨</h2>
-        <ScrollArea className="w-full whitespace-nowrap pb-2">
-          <div className="flex w-max space-x-3 px-1">
-            {missionTemplates.map((template) => (
+      {/* QUICK SUGGESTIONS */}
+      <div className="space-y-2">
+        <h2 className="text-sm font-display font-black text-foreground px-1">Sugestões Rápidas ✨</h2>
+        <ScrollArea className="w-full whitespace-nowrap">
+          <div className="flex w-max space-x-3 px-1 pb-2">
+            {missionTemplates.map(template => (
               <motion.button
                 key={template.id}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => handleTemplateClick(template)}
-                className="glass rounded-xl p-3 flex flex-col items-start gap-1 min-w-[140px] text-left border-border/50 hover:border-primary transition-colors"
+                className="glass rounded-2xl p-4 flex flex-col items-start gap-1.5 min-w-[150px] text-left hover:border-primary/40 transition-colors"
               >
-                <div className="text-2xl mb-1">{template.icon}</div>
-                <p className="font-body font-medium text-sm text-foreground truncate w-full">{template.name}</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs font-display font-bold text-xp">+{template.xp_value} XP</span>
-                  <span className="text-[10px] text-muted-foreground">{template.type === 'casal' ? 'Casal' : 'Indiv.'}</span>
+                <span className="text-2xl">{template.icon}</span>
+                <p className="font-display font-black text-sm text-foreground truncate w-full leading-tight">{template.name}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black text-xp" style={{ textShadow: "0 0 8px hsl(var(--xp)/0.6)" }}>+{template.xp_value} XP</span>
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{template.type === "casal" ? "Casal" : "Indiv."}</span>
                 </div>
               </motion.button>
             ))}
@@ -140,82 +133,108 @@ const Missions = () => {
         </ScrollArea>
       </div>
 
-      {/* Mission list */}
-      <div className="space-y-3 mt-4">
+      {/* MISSION LIST */}
+      <div className="space-y-3">
         {isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          </div>
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="glass rounded-3xl p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-2xl bg-muted animate-pulse shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-3/4 bg-muted animate-pulse rounded-lg" />
+                <div className="h-3 w-1/2 bg-muted animate-pulse rounded" />
+              </div>
+            </div>
+          ))
         ) : filteredHabits.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground font-body">
-            Nenhuma missão encontrada.
+          <div className="flex flex-col items-center py-16 text-center gap-3">
+            <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center text-3xl">🎯</div>
+            <p className="text-muted-foreground text-sm font-body">Nenhuma missão aqui.</p>
+            <button onClick={() => setShowCreate(true)} className="text-primary text-sm font-black underline underline-offset-2">Criar primeira missão</button>
           </div>
         ) : (
           <AnimatePresence>
-            {filteredHabits.map((m) => {
+            {filteredHabits.map((m, idx) => {
               const isCompleted = completions.some(c => c.habit_id === m.id && c.user_id === profile?.id);
-              
+              const cfg = typeConfig[m.type];
+              const TypeIcon = cfg.icon;
+
               return (
                 <motion.div
                   key={m.id}
                   layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                  transition={{ delay: idx * 0.04 }}
                   whileHover={{ y: -2 }}
-                  className="relative glass rounded-2xl p-4"
+                  className={`relative glass rounded-3xl p-4 border transition-all ${isCompleted ? "opacity-60" : ""}`}
                 >
-                  <div className="flex items-start gap-3">
-                    <button
+                  <div className="flex items-center gap-4">
+                    {/* CHECK BUTTON */}
+                    <motion.button
+                      whileTap={{ scale: 0.65 }}
+                      transition={{ type: "spring", stiffness: 600, damping: 18 }}
                       onClick={() => toggleMission(m.id)}
                       disabled={isCompleted || completeHabit.isPending}
-                      className={`w-7 h-7 rounded-lg border-2 flex items-center justify-center text-sm mt-0.5 transition-all ${
+                      className={`w-11 h-11 rounded-2xl border-2 flex items-center justify-center shrink-0 text-lg transition-all ${
                         isCompleted
-                          ? "bg-success border-success text-success-foreground"
-                          : "border-border hover:border-primary"
+                          ? "bg-success border-success shadow-[0_0_12px_hsl(var(--success)/0.5)]"
+                          : `${cfg.bg} ${cfg.border} hover:border-primary/60`
                       }`}
                     >
-                      {isCompleted && "✓"}
-                    </button>
+                      {isCompleted ? (
+                        <span className="text-success-foreground font-black text-sm">✓</span>
+                      ) : (
+                        <TypeIcon className={`w-5 h-5 ${cfg.color}`} />
+                      )}
+                    </motion.button>
+
+                    {/* CONTENT */}
                     <div className="flex-1 min-w-0">
-                      <p
-                        className={`font-body font-medium ${
-                          isCompleted ? "text-muted-foreground line-through" : "text-foreground"
-                        }`}
-                      >
+                      <p className={`font-display font-black text-sm leading-snug ${isCompleted ? "line-through text-muted-foreground" : "text-foreground"}`}>
                         {m.name}
                       </p>
                       {m.category && (
-                        <p className="text-xs text-muted-foreground font-body mt-0.5">{m.category}</p>
+                        <p className="text-[11px] text-muted-foreground font-body mt-0.5">{m.category}</p>
                       )}
-                      <div className="flex items-center gap-3 mt-2">
-                        <span className="inline-flex items-center gap-1 text-xp text-xs font-display font-bold bg-xp/10 rounded-full px-2 py-0.5">
-                          +{m.type === 'privada' ? 0 : m.xp_value} XP
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className={`text-[10px] font-black ${cfg.color} ${cfg.bg} px-2 py-0.5 rounded-full`}>
+                          {cfg.label}
                         </span>
-                        <span className="text-xs text-muted-foreground font-body">
-                          {m.frequency === "daily" ? "diária" : m.frequency === "weekly" ? "semanal" : "mensal"}
-                        </span>
-                        <span className="inline-flex items-center gap-0.5 text-xs font-body">
-                          {m.type === 'casal' ? (
-                            <div className="flex -space-x-1.5 mr-1">
-                              <div className="w-4 h-4 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center text-[8px] font-bold">{(profile?.name || "V")[0]}</div>
-                              <div className="w-4 h-4 rounded-full bg-love/20 border-2 border-card flex items-center justify-center text-[8px] font-bold">{(partnerData?.name || "?")[0]}</div>
-                            </div>
-                          ) : (
-                            <div className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold mr-1 border-2 border-card bg-primary/20">
-                              {m.type === 'privada' ? "🔒" : (profile?.name || "V")[0]}
-                            </div>
-                          )}
-                          {m.type === 'casal' ? "Casal" : m.type === 'individual' ? "Individual" : "Privada"}
+                        <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                          <Calendar className="w-2.5 h-2.5" />
+                          {freqLabel[m.frequency]}
                         </span>
                       </div>
                     </div>
+
+                    {/* XP BADGE */}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span
+                        className="text-xs font-black text-xp"
+                        style={{ textShadow: m.type !== "privada" ? "0 0 8px hsl(var(--xp)/0.6)" : "none" }}
+                      >
+                        {m.type === "privada" ? "🔒" : `+${m.xp_value} XP`}
+                      </span>
+                      <ChevronRight className="w-3 h-3 text-muted-foreground/30" />
+                    </div>
                   </div>
-                  {showXpPop === m.id && (
-                    <span className="absolute right-4 top-2 text-xp font-display font-bold text-base animate-xp-pop">
-                      {m.type === 'privada' ? '🔒 Privada' : `+${m.xp_value} XP`}
-                    </span>
-                  )}
+
+                  {/* XP POP */}
+                  <AnimatePresence>
+                    {showXpPop === m.id && (
+                      <motion.span
+                        initial={{ opacity: 1, y: 0, scale: 1 }}
+                        animate={{ opacity: 0, y: -28, scale: 1.4 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.7 }}
+                        className="absolute right-4 top-3 font-display font-black text-sm text-xp pointer-events-none"
+                        style={{ textShadow: "0 0 12px hsl(var(--xp))" }}
+                      >
+                        {m.type === "privada" ? "🔒" : `+${m.xp_value} XP`}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               );
             })}
@@ -223,88 +242,102 @@ const Missions = () => {
         )}
       </div>
 
-      {/* Create modal */}
+      {/* CREATE MODAL */}
       <AnimatePresence>
         {showCreate && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-foreground/40 flex items-center justify-center px-4"
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pb-4"
             onClick={() => setShowCreate(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-              className="glass rounded-3xl w-full max-w-md p-6 space-y-4 !bg-opacity-95"
+              initial={{ y: 60, opacity: 0, scale: 0.96 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 60, opacity: 0, scale: 0.96 }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md bg-card border border-border/50 rounded-[28px] p-6 space-y-5 shadow-2xl"
             >
               <div className="flex items-center justify-between">
-                <h2 className="font-display font-bold text-lg text-foreground">Nova Missão</h2>
-                <button onClick={() => setShowCreate(false)}>
-                  <X className="w-5 h-5 text-muted-foreground" />
+                <h2 className="font-display font-black text-xl text-foreground">Nova Missão</h2>
+                <button onClick={() => setShowCreate(false)} className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors">
+                  <X className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
+
               <div className="space-y-3">
                 <input
-                  placeholder="Nome da missão"
+                  placeholder="Nome da missão *"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full bg-muted/30 border border-border rounded-2xl px-4 py-3.5 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                 />
                 <input
-                  placeholder="Categoria / Descrição curta"
+                  placeholder="Categoria / Descrição"
                   value={newDesc}
                   onChange={e => setNewDesc(e.target.value)}
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full bg-muted/30 border border-border rounded-2xl px-4 py-3.5 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                 />
                 <div className="grid grid-cols-2 gap-3">
-                  <input
-                    placeholder="XP (ex: 20)"
-                    type="number"
-                    value={newXp}
-                    onChange={e => setNewXp(parseInt(e.target.value) || 0)}
-                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  />
-                  <select 
+                  <div className="relative">
+                    <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-xp" />
+                    <input
+                      placeholder="XP"
+                      type="number"
+                      value={newXp}
+                      onChange={e => setNewXp(parseInt(e.target.value) || 0)}
+                      className="w-full bg-muted/30 border border-border rounded-2xl pl-9 pr-4 py-3.5 text-sm font-body text-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    />
+                  </div>
+                  <select
                     value={newFreq}
-                    onChange={e => setNewFreq(e.target.value as "daily"|"weekly"|"monthly")}
-                    className="w-full bg-background border border-border rounded-xl px-4 py-3 text-sm font-body text-foreground outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    onChange={e => setNewFreq(e.target.value as "daily" | "weekly" | "monthly")}
+                    className="bg-muted/30 border border-border rounded-2xl px-4 py-3.5 text-sm font-body text-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
                   >
                     <option value="daily">Diária</option>
                     <option value="weekly">Semanal</option>
                   </select>
                 </div>
-                <div className="flex gap-2">
-                  {(["individual", "casal", "privada"] as const).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setNewType(t)}
-                      className={`flex-1 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-body font-medium transition-colors border ${
-                        newType === t 
-                          ? "bg-primary/20 text-primary border-primary/30" 
-                          : "bg-background text-muted-foreground border-border hover:bg-accent"
-                      }`}
-                    >
-                      {t === "individual" ? "👤 Indiv." : t === "casal" ? "👫 Casal" : "🔒 Privada"}
-                    </button>
-                  ))}
+
+                {/* TYPE SELECTOR */}
+                <div className="grid grid-cols-3 gap-2">
+                  {(["individual", "casal", "privada"] as const).map(t => {
+                    const c = typeConfig[t];
+                    const TIcon = c.icon;
+                    return (
+                      <button
+                        key={t}
+                        onClick={() => setNewType(t)}
+                        className={`flex flex-col items-center gap-1.5 py-3 rounded-2xl text-xs font-black border-2 transition-all ${
+                          newType === t ? `${c.bg} ${c.border} ${c.color}` : "bg-muted/20 border-border text-muted-foreground hover:border-muted-foreground/40"
+                        }`}
+                      >
+                        <TIcon className="w-4 h-4" />
+                        {t === "individual" ? "Individual" : t === "casal" ? "Casal" : "Privada"}
+                      </button>
+                    );
+                  })}
                 </div>
-                
+
                 {newType === "privada" && (
-                  <p className="text-xs text-muted-foreground text-center animate-in fade-in slide-in-from-top-1">
-                    Missões privadas são invisíveis para o seu parceiro(a) e não geram recompensas (0 XP).
-                  </p>
+                  <motion.p
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="text-[11px] text-muted-foreground text-center bg-muted/30 rounded-xl p-3"
+                  >
+                    🔒 Invisível ao parceiro · sem XP
+                  </motion.p>
                 )}
               </div>
+
               <Button
-                className="w-full bg-primary text-primary-foreground font-display font-bold rounded-xl mt-4 h-12 shadow-[var(--shadow-love)]"
+                className="w-full h-13 bg-primary text-white font-display font-black rounded-2xl shadow-[0_0_20px_hsl(var(--primary)/0.35)] text-sm uppercase tracking-wide py-4"
                 onClick={handleCreate}
                 disabled={!newName.trim() || createHabit.isPending}
               >
-                {createHabit.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Criar Missão"}
+                {createHabit.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Criar Missão 🎯"}
               </Button>
             </motion.div>
           </motion.div>

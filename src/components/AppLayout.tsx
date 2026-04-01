@@ -27,7 +27,7 @@ const AppLayout = () => {
       {/* Dynamic Background Layer */}
       <div className="fixed inset-0 animated-mesh -z-10 opacity-50 dark:opacity-30 pointer-events-none" />
 
-      <main className="relative z-10 max-w-lg mx-auto min-h-screen flex flex-col" style={{ paddingBottom: "max(env(safe-area-inset-bottom) + 90px, 96px)", paddingTop: "env(safe-area-inset-top, 0px)" }}>
+      <main className="relative max-w-lg mx-auto min-h-screen flex flex-col" style={{ paddingBottom: "max(env(safe-area-inset-bottom) + 90px, 96px)", paddingTop: "env(safe-area-inset-top, 0px)" }}>
         <div className="flex-1 w-full">
           <Outlet />
         </div>

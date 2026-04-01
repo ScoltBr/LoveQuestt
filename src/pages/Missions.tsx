@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X, Loader2, Lock, Users, User, Zap, Calendar, ChevronRight } from "lucide-react";
+import { Plus, X, Loader2, Lock, Users, User, Zap, Calendar, Pencil, Archive, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useHabits, useCompletions, useCompleteHabit, useCreateHabit } from "@/hooks/useHabits";
+import { useHabits, useCompletions, useCompleteHabit, useUncompleteHabit, useCreateHabit, useUpdateHabit, useDeleteHabit, Habit } from "@/hooks/useHabits";
 import { format } from "date-fns";
 import { useProfile, useCouple } from "@/hooks/useProfile";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -20,6 +20,15 @@ const Missions = () => {
   const [filter, setFilter] = useState<"todas" | "individual" | "casal" | "privada">("todas");
   const [showCreate, setShowCreate] = useState(false);
   const [showXpPop, setShowXpPop] = useState<string | null>(null);
+  const [popType, setPopType] = useState<"plus" | "minus">("plus");
+
+  // ── Edit/Delete state ────────────────────────────────────────────────
+  const [editingMission, setEditingMission] = useState<Habit | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editXp, setEditXp] = useState(20);
+  const [editFreq, setEditFreq] = useState<"daily" | "weekly" | "monthly">("daily");
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
@@ -30,7 +39,10 @@ const Missions = () => {
   const { data: habits = [], isLoading } = useHabits();
   const { data: completions = [] } = useCompletions(todayStr);
   const completeHabit = useCompleteHabit();
+  const uncompleteHabit = useUncompleteHabit();
   const createHabit = useCreateHabit();
+  const updateHabit = useUpdateHabit();
+  const deleteHabit = useDeleteHabit();
 
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -50,9 +62,20 @@ const Missions = () => {
   const filteredHabits = habits.filter(h => filter === "todas" ? true : h.type === filter);
 
   const toggleMission = (habitId: string) => {
-    if (completions.some(c => c.habit_id === habitId && c.user_id === profile?.id)) return;
+    const isCompleted = completions.some(c => c.habit_id === habitId && c.user_id === profile?.id);
+    
+    if (isCompleted) {
+      setPopType("minus");
+      setShowXpPop(habitId);
+      setTimeout(() => setShowXpPop(null), 900);
+      uncompleteHabit.mutate({ habitId, date: todayStr });
+      return;
+    }
+
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
+    
+    setPopType("plus");
     setShowXpPop(habitId);
     setTimeout(() => setShowXpPop(null), 900);
     completeHabit.mutate({ habit, date: todayStr });
@@ -62,6 +85,31 @@ const Missions = () => {
     if (!newName.trim()) return;
     createHabit.mutate({ name: newName, category: newDesc, xp_value: newXp, frequency: newFreq, type: newType, is_active: true, emoji: null }, {
       onSuccess: () => { setShowCreate(false); setNewName(""); setNewDesc(""); setNewXp(20); }
+    });
+  };
+
+  // ── Edit handlers ────────────────────────────────────────────────────
+  const openEdit = (mission: Habit) => {
+    setEditingMission(mission);
+    setEditName(mission.name);
+    setEditDesc(mission.category || "");
+    setEditXp(mission.xp_value);
+    setEditFreq(mission.frequency);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleUpdate = () => {
+    if (!editingMission || !editName.trim()) return;
+    updateHabit.mutate(
+      { id: editingMission.id, updates: { name: editName, category: editDesc, xp_value: editXp, frequency: editFreq } },
+      { onSuccess: () => setEditingMission(null) }
+    );
+  };
+
+  const handleDelete = () => {
+    if (!editingMission) return;
+    deleteHabit.mutate(editingMission.id, {
+      onSuccess: () => { setEditingMission(null); setShowDeleteConfirm(false); }
     });
   };
 
@@ -175,7 +223,7 @@ const Missions = () => {
                       whileTap={{ scale: 0.65 }}
                       transition={{ type: "spring", stiffness: 600, damping: 18 }}
                       onClick={() => toggleMission(m.id)}
-                      disabled={isCompleted || completeHabit.isPending}
+                      disabled={completeHabit.isPending || uncompleteHabit.isPending}
                       className={`w-11 h-11 rounded-2xl border-2 flex items-center justify-center shrink-0 text-lg transition-all ${
                         isCompleted
                           ? "bg-success border-success shadow-[0_0_12px_hsl(var(--success)/0.5)]"
@@ -189,8 +237,11 @@ const Missions = () => {
                       )}
                     </motion.button>
 
-                    {/* CONTENT */}
-                    <div className="flex-1 min-w-0">
+                    {/* CONTENT — clicável para abrir edição */}
+                    <button
+                      className="flex-1 min-w-0 text-left"
+                      onClick={() => openEdit(m)}
+                    >
                       <p className={`font-display font-black text-sm leading-snug ${isCompleted ? "line-through text-muted-foreground" : "text-foreground"}`}>
                         {m.name}
                       </p>
@@ -206,9 +257,9 @@ const Missions = () => {
                           {freqLabel[m.frequency]}
                         </span>
                       </div>
-                    </div>
+                    </button>
 
-                    {/* XP BADGE */}
+                    {/* XP BADGE + EDIT ICON */}
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span
                         className="text-xs font-black text-xp"
@@ -216,7 +267,12 @@ const Missions = () => {
                       >
                         {m.type === "privada" ? "🔒" : `+${m.xp_value} XP`}
                       </span>
-                      <ChevronRight className="w-3 h-3 text-muted-foreground/30" />
+                      <button
+                        onClick={() => openEdit(m)}
+                        className="w-6 h-6 rounded-lg bg-muted/40 flex items-center justify-center hover:bg-muted/70 transition-colors"
+                      >
+                        <Pencil className="w-3 h-3 text-muted-foreground" />
+                      </button>
                     </div>
                   </div>
 
@@ -225,13 +281,15 @@ const Missions = () => {
                     {showXpPop === m.id && (
                       <motion.span
                         initial={{ opacity: 1, y: 0, scale: 1 }}
-                        animate={{ opacity: 0, y: -28, scale: 1.4 }}
+                        animate={{ opacity: 0, y: popType === "plus" ? -28 : 28, scale: 1.4 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.7 }}
-                        className="absolute right-4 top-3 font-display font-black text-sm text-xp pointer-events-none"
-                        style={{ textShadow: "0 0 12px hsl(var(--xp))" }}
+                        className={`absolute right-4 top-3 font-display font-black text-sm pointer-events-none ${
+                          popType === "plus" ? "text-xp" : "text-destructive"
+                        }`}
+                        style={{ textShadow: popType === "plus" ? "0 0 12px hsl(var(--xp))" : "0 0 12px hsl(var(--destructive))" }}
                       >
-                        {m.type === "privada" ? "🔒" : `+${m.xp_value} XP`}
+                        {m.type === "privada" ? "🔒" : `${popType === "plus" ? "+" : "-"}${m.xp_value} XP`}
                       </motion.span>
                     )}
                   </AnimatePresence>
@@ -242,6 +300,84 @@ const Missions = () => {
         )}
       </div>
 
+      {/* ── EDIT MISSION BOTTOM SHEET ──────────────────────────────────── */}
+      <AnimatePresence>
+        {editingMission && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => { setEditingMission(null); setShowDeleteConfirm(false); }}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md bg-card border border-border/50 rounded-t-[28px] p-6 space-y-4 shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <h2 className="font-display font-black text-lg text-foreground">Editar Missão</h2>
+                <button
+                  onClick={() => { setEditingMission(null); setShowDeleteConfirm(false); }}
+                  className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* Fields */}
+              <div className="space-y-3">
+                <input
+                  placeholder="Nome da missão *"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  className="w-full bg-muted/30 border border-border rounded-2xl px-4 py-3 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+                <input
+                  placeholder="Categoria / Descrição"
+                  value={editDesc}
+                  onChange={e => setEditDesc(e.target.value)}
+                  className="w-full bg-muted/30 border border-border rounded-2xl px-4 py-3 text-sm font-body text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <Zap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-xp" />
+                    <input
+                      type="number"
+                      value={editXp}
+                      onChange={e => setEditXp(parseInt(e.target.value) || 0)}
+                      className="w-full bg-muted/30 border border-border rounded-2xl pl-9 pr-4 py-3 text-sm font-body text-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                    />
+                  </div>
+                  <select
+                    value={editFreq}
+                    onChange={e => setEditFreq(e.target.value as "daily" | "weekly" | "monthly")}
+                    className="bg-muted/30 border border-border rounded-2xl px-4 py-3 text-sm font-body text-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
+                  >
+                    <option value="daily">Diária</option>
+                    <option value="weekly">Semanal</option>
+                    <option value="monthly">Mensal</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Save button */}
+              <Button
+                className="w-full py-3 bg-primary text-white font-display font-black rounded-2xl shadow-[0_0_16px_hsl(var(--primary)/0.35)]"
+                onClick={handleUpdate}
+                disabled={!editName.trim() || updateHabit.isPending}
+              >
+                {updateHabit.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Salvar Alterações ✏️"}
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* CREATE MODAL */}
       <AnimatePresence>
         {showCreate && (
@@ -249,7 +385,7 @@ const Missions = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pb-4"
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pb-4"
             onClick={() => setShowCreate(false)}
           >
             <motion.div

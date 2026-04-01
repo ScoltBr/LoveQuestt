@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useProfile, useCouple } from './useProfile';
 import { useSound } from './useSound';
 import { toast } from 'sonner';
+import { parseISO, differenceInCalendarDays } from 'date-fns';
 
 export interface Habit {
   id: string;
@@ -110,11 +111,12 @@ export function useCompleteHabit() {
         .limit(1);
 
       const lastDate = lastCompletions?.[0]?.completed_at;
-      const today = new Date(date);
+      // Fix: usar parseISO + T00:00:00 para tratar como hora local e evitar offset de timezone
+      const today = parseISO(date + 'T00:00:00');
       
       if (lastDate) {
-        const last = new Date(lastDate);
-        const diffDays = Math.floor((today.getTime() - last.getTime()) / (1000 * 60 * 60 * 24));
+        const last = parseISO(lastDate + 'T00:00:00');
+        const diffDays = differenceInCalendarDays(today, last);
         
         if (diffDays === 1) {
           // Completou ontem, incrementa streak (apenas se for a primeira missão do dia)
@@ -207,7 +209,6 @@ export function useCompleteHabit() {
           content: `${profile.name || 'Seu par'} completou a missão: ${habit.name}! 🎯`
         });
       }
-
       return { habit, newXp, xpToEarn };
     },
     onSuccess: (data, variables) => {
@@ -223,6 +224,80 @@ export function useCompleteHabit() {
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao concluir missão");
+    }
+  });
+}
+
+export function useUncompleteHabit() {
+  const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const { data: profile } = useProfile();
+  
+  return useMutation({
+    mutationFn: async ({ habitId, date }: { habitId: string; date: string }) => {
+      if (!session?.user?.id || !profile) throw new Error("Não autenticado");
+
+      // 1. Buscar a conclusão específica
+      const { data: completion, error: fetchError } = await supabase
+        .from('habit_completions')
+        .select('*')
+        .eq('habit_id', habitId)
+        .eq('user_id', session.user.id)
+        .eq('completed_at', date)
+        .single();
+
+      if (fetchError || !completion) throw new Error("Conclusão não encontrada");
+
+      // 2. Deletar a conclusão
+      const { error: deleteError } = await supabase
+        .from('habit_completions')
+        .delete()
+        .eq('id', completion.id);
+
+      if (deleteError) throw deleteError;
+
+      // 3. Atualizar XP e Streak
+      const xpToSubtract = completion.xp_earned || 0;
+      let newStreak = profile.streak || 0;
+
+      // Verificar se ainda existem conclusões hoje
+      const { count: remainingToday } = await supabase
+        .from('habit_completions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.user.id)
+        .eq('completed_at', date);
+
+      if ((remainingToday || 0) === 0) {
+        // Se era a última missão do dia, o streak "volta" um dia (se fosse > 0)
+        newStreak = Math.max(0, newStreak - 1);
+      }
+
+      const newXp = Math.max(0, (profile.xp || 0) - xpToSubtract);
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          xp: newXp,
+          streak: newStreak
+        })
+        .eq('id', session.user.id);
+
+      if (profileError) throw profileError;
+
+      return { habitId, xpSubtracted: xpToSubtract };
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['completions', variables.date] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      
+      if (data.xpSubtracted > 0) {
+        toast.error(`-${data.xpSubtracted} XP (Missão desmarcada)`);
+      } else {
+        toast.info(`Missão Privada desmarcada`);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erro ao desmarcar missão");
     }
   });
 }
@@ -258,5 +333,70 @@ export function useCreateHabit() {
     onError: (error: any) => {
       toast.error(error.message || "Erro ao criar missão");
     }
+  });
+}
+
+export function useUpdateHabit() {
+  const queryClient = useQueryClient();
+  const { data: profile } = useProfile();
+
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Habit, 'name' | 'xp_value' | 'frequency' | 'category' | 'emoji'>> }) => {
+      const { data, error } = await supabase
+        .from('habits')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Habit;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['habits', profile?.couple_id] });
+      toast.success('Missão atualizada! ✏️');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erro ao atualizar missão');
+    },
+  });
+}
+
+export function useDeleteHabit() {
+  const queryClient = useQueryClient();
+  const { data: profile } = useProfile();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // Soft delete: marca como inativa em vez de deletar permanentemente
+      const { error } = await supabase
+        .from('habits')
+        .update({ is_active: false })
+        .eq('id', id);
+
+      if (error) throw error;
+      return id;
+    },
+    onMutate: async (id: string) => {
+      // Optimistic update: remove imediatamente da UI antes da resposta
+      await queryClient.cancelQueries({ queryKey: ['habits', profile?.couple_id] });
+      const previous = queryClient.getQueryData<Habit[]>(['habits', profile?.couple_id]);
+      queryClient.setQueryData<Habit[]>(
+        ['habits', profile?.couple_id],
+        (old) => (old ?? []).filter((h) => h.id !== id)
+      );
+      return { previous };
+    },
+    onError: (_err: any, _id: string, context: any) => {
+      // Rollback se o servidor retornar erro
+      if (context?.previous) {
+        queryClient.setQueryData(['habits', profile?.couple_id], context.previous);
+      }
+      toast.error('Erro ao arquivar missão');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['habits', profile?.couple_id] });
+      toast.success('Missão arquivada! 📦');
+    },
   });
 }

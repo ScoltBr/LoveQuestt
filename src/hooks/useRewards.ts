@@ -297,11 +297,73 @@ export function useRejectReward() {
     },
     onSuccess: () => {
       playNotification();
-      queryClient.invalidateQueries({ queryKey: ['rewards', profile?.couple_id] });
+      queryClient.invalidateQueries({ queryKey: ["rewards", profile?.couple_id] });
       toast.info("Resgate rejeitado. XP devolvido.");
     },
     onError: (error: any) => {
       toast.error(error.message || "Erro ao rejeitar recompensa");
     }
+  });
+}
+
+export function useUpdateReward() {
+  const queryClient = useQueryClient();
+  const { data: profile } = useProfile();
+
+  return useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Pick<Reward, 'name' | 'cost' | 'emoji' | 'is_reusable'>> }) => {
+      const { data, error } = await supabase
+        .from('rewards')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Reward;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rewards', profile?.couple_id] });
+      toast.success('Recompensa atualizada! ✏️');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erro ao atualizar recompensa');
+    },
+  });
+}
+
+export function useDeleteReward() {
+  const queryClient = useQueryClient();
+  const { data: profile } = useProfile();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('rewards')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return id;
+    },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ['rewards', profile?.couple_id] });
+      const previous = queryClient.getQueryData<Reward[]>(['rewards', profile?.couple_id]);
+      queryClient.setQueryData<Reward[]>(
+        ['rewards', profile?.couple_id],
+        (old) => (old ?? []).filter((r) => r.id !== id)
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(['rewards', profile?.couple_id], context.previous);
+      }
+      toast.error('Erro ao excluir recompensa');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rewards', profile?.couple_id] });
+      toast.success('Recompensa excluída! 🗑️');
+    },
   });
 }

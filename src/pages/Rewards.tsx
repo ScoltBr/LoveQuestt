@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Plus, X, CheckCircle2, Sparkles, Loader2, Star, Repeat } from "lucide-react";
+import { Gift, Plus, X, CheckCircle2, Sparkles, Loader2, Star, Repeat, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import { useProfile, useCouple } from "@/hooks/useProfile";
-import { useRewards, useCreateReward, useRedeemReward, useApproveReward, useRejectReward, useCompleteReward, Reward } from "@/hooks/useRewards";
+import { useRewards, useCreateReward, useRedeemReward, useApproveReward, useRejectReward, useCompleteReward, useUpdateReward, useDeleteReward, Reward } from "@/hooks/useRewards";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -14,6 +14,14 @@ const Rewards = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [confirmRedeem, setConfirmRedeem] = useState<Reward | null>(null);
   const [justRedeemed, setJustRedeemed] = useState<string | null>(null);
+
+  // ── Edit/Delete state ────────────────────────────────────────────────
+  const [editingReward, setEditingReward] = useState<Reward | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editXp, setEditXp] = useState("");
+  const [editEmoji, setEditEmoji] = useState("🎁");
+  const [editReusable, setEditReusable] = useState(false);
 
   const { data: profile } = useProfile();
   const { data: couple } = useCouple(profile?.couple_id || null);
@@ -24,6 +32,8 @@ const Rewards = () => {
   const approveReward = useApproveReward();
   const rejectReward = useRejectReward();
   const completeReward = useCompleteReward();
+  const updateReward = useUpdateReward();
+  const deleteReward = useDeleteReward();
 
   const userXp = profile?.xp || 0;
 
@@ -69,6 +79,34 @@ const Rewards = () => {
     if (isNaN(xpVal) || xpVal <= 0) { toast.error("XP deve ser número positivo."); return; }
     createReward.mutate({ name: newName.trim(), cost: xpVal, emoji: newEmoji, is_reusable: isReusable }, {
       onSuccess: () => { setNewName(""); setNewXp(""); setNewEmoji("🎁"); setIsReusable(false); setShowCreate(false); }
+    });
+  };
+
+  // ── Edit handlers ────────────────────────────────────────────────────
+  const openEdit = (reward: Reward) => {
+    setEditingReward(reward);
+    setEditName(reward.name);
+    setEditXp(reward.cost.toString());
+    setEditEmoji(reward.emoji || "🎁");
+    setEditReusable(reward.is_reusable || false);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleUpdate = () => {
+    if (!editingReward || !editName.trim() || !editXp.trim()) return;
+    const xpVal = parseInt(editXp);
+    if (isNaN(xpVal) || xpVal <= 0) { toast.error("XP deve ser número positivo."); return; }
+    
+    updateReward.mutate(
+      { id: editingReward.id, updates: { name: editName.trim(), cost: xpVal, emoji: editEmoji, is_reusable: editReusable } },
+      { onSuccess: () => setEditingReward(null) }
+    );
+  };
+
+  const handleDelete = () => {
+    if (!editingReward) return;
+    deleteReward.mutate(editingReward.id, {
+      onSuccess: () => { setEditingReward(null); setShowDeleteConfirm(false); }
     });
   };
 
@@ -153,6 +191,14 @@ const Rewards = () => {
                       <Repeat className="w-3 h-3 text-primary/60" />
                     </div>
                   )}
+
+                  {/* EDIT BUTTON */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openEdit(r); }}
+                    className="absolute top-2.5 left-2.5 w-7 h-7 rounded-lg bg-muted/40 flex items-center justify-center hover:bg-muted/70 transition-colors z-20"
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
 
                   <span className="text-4xl mt-2 mb-3 relative z-10">{r.emoji || "🎁"}</span>
                   <p className="font-display font-black text-foreground text-sm mb-2 relative z-10 leading-tight">{r.name}</p>
@@ -272,6 +318,133 @@ const Rewards = () => {
         </div>
       )}
 
+      {/* ── EDIT REWARD BOTTOM SHEET ───────────────────────────────────── */}
+      <AnimatePresence>
+        {editingReward && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end justify-center"
+            onClick={() => { setEditingReward(null); setShowDeleteConfirm(false); }}
+          >
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              onClick={e => e.stopPropagation()}
+              className="w-full max-w-md bg-card border border-border/50 rounded-t-[28px] p-6 space-y-5 shadow-2xl"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="font-display font-black text-xl text-foreground">Editar Recompensa</h2>
+                <button
+                  onClick={() => { setEditingReward(null); setShowDeleteConfirm(false); }}
+                  className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+
+              {/* EMOJI GRID */}
+              <div>
+                <p className="text-xs font-black text-muted-foreground mb-2 uppercase tracking-widest">Emoji</p>
+                <div className="flex flex-wrap gap-2">
+                  {emojiOptions.map(e => (
+                    <button
+                      key={e}
+                      onClick={() => setEditEmoji(e)}
+                      className={`text-2xl w-11 h-11 rounded-2xl flex items-center justify-center transition-all ${
+                        editEmoji === e ? "bg-primary/15 ring-2 ring-primary scale-110 shadow-[0_0_10px_hsl(var(--primary)/0.3)]" : "bg-muted/30 hover:bg-muted/60 border border-border/50"
+                      }`}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <input
+                  placeholder="Nome da recompensa *"
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  className="w-full bg-muted/30 border border-border rounded-2xl px-4 py-3.5 text-sm font-body text-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                />
+                <div className="relative">
+                  <Star className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-xp" />
+                  <input
+                    placeholder="Custo em XP"
+                    type="number"
+                    value={editXp}
+                    onChange={e => setEditXp(e.target.value)}
+                    className="w-full bg-muted/30 border border-border rounded-2xl pl-9 pr-4 py-3.5 text-sm font-body text-foreground outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* REUSABLE TOGGLE */}
+              <div className="flex items-center justify-between bg-muted/20 border border-border/50 p-4 rounded-2xl">
+                <div>
+                  <p className="text-sm font-display font-black text-foreground flex items-center gap-2">
+                    <Repeat className="w-4 h-4 text-primary" /> Reutilizável
+                  </p>
+                </div>
+                <button
+                  onClick={() => setEditReusable(!editReusable)}
+                  className={`w-12 h-6 rounded-full transition-all relative ${editReusable ? "bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]" : "bg-muted"}`}
+                >
+                  <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${editReusable ? "translate-x-6" : "translate-x-0"}`} />
+                </button>
+              </div>
+
+              <Button
+                className="w-full h-13 py-4 bg-primary text-white font-display font-black rounded-2xl shadow-[0_0_20px_hsl(var(--primary)/0.35)]"
+                onClick={handleUpdate}
+                disabled={!editName.trim() || !editXp.trim() || updateReward.isPending}
+              >
+                {updateReward.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Salvar Alterações ✏️"}
+              </Button>
+
+              {/* Delete */}
+              {!showDeleteConfirm ? (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2 text-sm font-black text-destructive hover:bg-destructive/5 rounded-2xl transition-colors"
+                >
+                  Excluir recompensa
+                </button>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-destructive/5 border border-destructive/20 rounded-2xl p-4 space-y-3"
+                >
+                  <p className="text-xs font-body text-center text-muted-foreground">
+                    Tem certeza? Esta ação não pode ser desfeita.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="flex-1 py-2 text-xs font-black text-muted-foreground border border-border/60 rounded-xl hover:bg-muted/20 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={deleteReward.isPending}
+                      className="flex-1 py-2 text-xs font-black text-white bg-destructive rounded-xl hover:opacity-90 transition-opacity flex items-center justify-center"
+                    >
+                      {deleteReward.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : "Sim, Excluir"}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* CONFIRM REDEEM MODAL */}
       <AnimatePresence>
         {confirmRedeem && (
@@ -279,7 +452,7 @@ const Rewards = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-6"
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center px-6"
             onClick={() => setConfirmRedeem(null)}
           >
             <motion.div
@@ -332,7 +505,7 @@ const Rewards = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pb-4"
+            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center px-4 pb-4"
             onClick={() => setShowCreate(false)}
           >
             <motion.div

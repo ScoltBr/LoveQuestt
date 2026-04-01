@@ -24,7 +24,7 @@ const BottomNav = () => {
   return (
     /* Floating pill container — fixed above safe-area, centered, pill-shaped */
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex justify-center"
+      className="fixed bottom-0 left-0 right-0 z-40 flex justify-center"
       style={{ paddingBottom: "max(env(safe-area-inset-bottom), 14px)" }}
     >
       <nav

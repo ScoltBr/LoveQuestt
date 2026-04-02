@@ -31,9 +31,8 @@ const AppLayout = () => {
         <div className="flex-1 w-full">
           <Outlet />
         </div>
+        <BottomNav />
       </main>
-
-      <BottomNav />
     </div>
   );
 

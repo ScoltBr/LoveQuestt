@@ -137,8 +137,14 @@ export function useRedeemReward() {
         await supabase.from('notifications').insert({
           user_id: partnerId,
           type: 'reward',
-          content: `${profile.name || 'Seu par'} quer resgatar: ${reward.emoji} ${reward.name}! ✨`
-        });
+          content: `${profile.name || 'Seu par'} quer resgatar: ${reward.emoji || '🎁'} ${reward.name} (Custo: ${reward.cost} XP)! ✨`,
+          metadata: { 
+            reward_id: reward.id, 
+            cost: reward.cost, 
+            redeemed_by: session.user.id, 
+            name: reward.name 
+          }
+        } as any);
       }
 
       return { reward, newXp };

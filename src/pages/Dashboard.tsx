@@ -9,11 +9,14 @@ import JoinCouple from "@/components/JoinCouple";
 import { useHabits, useCompletions, useCompleteHabit } from "@/hooks/useHabits";
 import { useCoupleStats } from "@/hooks/useCoupleStats";
 import { useNotifications, useMarkNotificationsRead } from "@/hooks/useNotifications";
+import { useApproveReward, useRejectReward, Reward } from "@/hooks/useRewards";
+import { Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useVibration } from "@/hooks/useVibration";
+import { PageSkeleton } from "@/components/PageSkeleton";
 
 import type { Variants } from "framer-motion";
 
@@ -55,6 +58,23 @@ const Dashboard = () => {
   const unreadCount = notifications.filter(n => !n.is_read).length;
   const { success: vibrateSuccess } = useVibration();
 
+  const approveReward = useApproveReward();
+  const rejectReward = useRejectReward();
+
+  const handleAction = (n: any, type: 'approve' | 'reject') => {
+    if (!n.metadata?.reward_id) return;
+    const mockReward: Reward = {
+      id: n.metadata.reward_id,
+      name: n.metadata.name || 'Recompensa',
+      cost: n.metadata.cost || 0,
+      redeemed_by: n.metadata.redeemed_by,
+      created_by: '', couple_id: '', is_redeemed: true,
+      redeemed_at: n.created_at, created_at: n.created_at, emoji: '🎁'
+    };
+    if (type === 'approve') approveReward.mutate(mockReward);
+    else rejectReward.mutate(mockReward);
+  };
+
   const toggleNotifs = () => {
     if (!showNotifs && unreadCount > 0) markRead.mutate();
     setShowNotifs(!showNotifs);
@@ -79,39 +99,7 @@ const Dashboard = () => {
 
   // ─── LOADING SKELETON ──────────────────────────────────────────────────────
   if (isLoading) {
-    return (
-      <div className="px-4 pt-6 space-y-4 pb-24">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <div className="h-7 w-52 bg-muted animate-pulse rounded-xl" />
-            <div className="h-4 w-28 bg-muted animate-pulse rounded-lg" />
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-11 h-11 rounded-full bg-muted animate-pulse" />
-            <div className="w-11 h-11 rounded-full bg-muted animate-pulse" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 mt-4">
-          {[0, 1].map(i => (
-            <div key={i} className="glass rounded-3xl p-5 space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-muted animate-pulse" />
-              <div className="h-6 w-16 bg-muted animate-pulse rounded-lg" />
-              <div className="h-3 w-24 bg-muted animate-pulse rounded" />
-            </div>
-          ))}
-        </div>
-        <div className="glass rounded-3xl p-5">
-          <div className="h-4 w-36 bg-muted animate-pulse rounded mb-4" />
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-muted animate-pulse shrink-0" />
-            <div className="flex-1 space-y-2">
-              <div className="w-full bg-muted animate-pulse rounded-full h-3" />
-              <div className="h-3 w-32 bg-muted animate-pulse rounded" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   // ─── STATES: NO COUPLE / WAITING PARTNER ───────────────────────────────────
@@ -227,6 +215,29 @@ const Dashboard = () => {
                     <div className="flex-1 min-w-0">
                       <p className="text-foreground text-xs leading-snug">{n.content}</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">{format(new Date(n.created_at), "HH:mm")}</p>
+                      
+                      {/* Inline Actions for pending rewards */}
+                      {n.type === 'reward' && n.metadata?.reward_id && n.metadata?.redeemed_by !== profile?.id && (
+                        <div className="flex gap-2 mt-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-6 px-2 text-[10px] border-destructive/20 text-destructive hover:bg-destructive/10"
+                            onClick={() => handleAction(n, 'reject')}
+                            disabled={rejectReward.isPending || approveReward.isPending}
+                          >
+                            <X className="w-2.5 h-2.5 mr-0.5" /> Rejeitar
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            className="h-6 px-2 text-[10px] bg-success text-white hover:bg-success/90"
+                            onClick={() => handleAction(n, 'approve')}
+                            disabled={rejectReward.isPending || approveReward.isPending}
+                          >
+                            <Check className="w-2.5 h-2.5 mr-0.5" /> Aprovar
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))

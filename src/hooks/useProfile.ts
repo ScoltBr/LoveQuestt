@@ -17,6 +17,7 @@ export interface Couple {
     partner1_id: string;
     partner2_id: string | null;
     invite_code: string | null;
+    gacha_enabled: boolean;
 }
 
 export function useProfile() {

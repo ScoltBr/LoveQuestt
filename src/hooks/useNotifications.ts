@@ -11,7 +11,10 @@ export interface AppNotification {
   content: string;
   is_read: boolean;
   created_at: string;
+  metadata?: { reward_id?: string; cost?: number; redeemed_by?: string; name?: string; [key: string]: any };
 }
+
+import { RewardToast } from '../components/RewardToast';
 
 export function useNotifications() {
   const { session } = useAuth();
@@ -53,9 +56,15 @@ export function useNotifications() {
           const newNotif = payload.new as AppNotification;
           
           // Show toast for new notification
-          toast(newNotif.content, {
-             icon: getIconForType(newNotif.type)
-          });
+          if (newNotif.type === 'reward' && newNotif.metadata?.reward_id) {
+            toast.custom((t) => <RewardToast notification={newNotif} t={t} />, {
+              duration: 10000, // Dá mais tempo para o parceiro ver e clicar
+            });
+          } else {
+            toast(newNotif.content, {
+               icon: getIconForType(newNotif.type)
+            });
+          }
         }
       )
       .subscribe();

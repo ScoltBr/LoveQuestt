@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { useEffect } from 'react';
+import { useEffect, createElement } from 'react';
 import { toast } from 'sonner';
 
 export interface AppNotification {
@@ -57,7 +57,7 @@ export function useNotifications() {
           
           // Show toast for new notification
           if (newNotif.type === 'reward' && newNotif.metadata?.reward_id) {
-            toast.custom((t) => <RewardToast notification={newNotif} t={t} />, {
+            toast.custom((t) => createElement(RewardToast, { notification: newNotif, t: t.valueOf() as string | number }), {
               duration: 10000, // Dá mais tempo para o parceiro ver e clicar
             });
           } else {

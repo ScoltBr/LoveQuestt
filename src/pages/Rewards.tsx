@@ -8,6 +8,8 @@ import { useProfile, useCouple } from "@/hooks/useProfile";
 import { useRewards, useCreateReward, useRedeemReward, useApproveReward, useRejectReward, useCompleteReward, useUpdateReward, useDeleteReward, Reward } from "@/hooks/useRewards";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { triggerRewardPush } from "@/hooks/usePushNotifications";
+import { supabase } from "@/lib/supabase";
 
 const Rewards = () => {
   const [tab, setTab] = useState<"catalogo" | "historico">("catalogo");
@@ -58,7 +60,7 @@ const Rewards = () => {
   const confirmRedemption = () => {
     if (!confirmRedeem) return;
     redeemReward.mutate(confirmRedeem, {
-      onSuccess: () => {
+      onSuccess: async () => {
         setJustRedeemed(confirmRedeem.id);
         setConfirmRedeem(null);
         const end = Date.now() + 1500;
@@ -69,6 +71,19 @@ const Rewards = () => {
         };
         frame();
         setTimeout(() => setJustRedeemed(null), 2500);
+
+        // ── Notificar o parceiro via Push Notification ────────────────────────
+        if (partnerData?.id) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            triggerRewardPush({
+              targetUserId: partnerData.id,
+              rewardName: confirmRedeem.name,
+              rewardEmoji: confirmRedeem.emoji || "🎁",
+              accessToken: session.access_token,
+            });
+          }
+        }
       },
     });
   };

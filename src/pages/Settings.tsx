@@ -10,8 +10,9 @@ import {
   Unlink, Bell, Gift, CheckCircle, Target, Flame, Sun, Moon,
   Monitor, Palette, Crown, Star, Shield, Download, Trash2,
   FileText, ScrollText, HelpCircle, MessageSquare, Bug, Send,
-  ChevronRight, ChevronDown, Sparkles, Zap,
+  ChevronRight, ChevronDown, Sparkles, Zap, Smartphone, Loader2,
 } from "lucide-react";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
@@ -126,6 +127,9 @@ interface UserPreferences {
   reward_approval: boolean;
   reward_cancel:   boolean;
   reward_history:  boolean;
+  push_enabled:    boolean;
+  push_daily_reminder: boolean;
+  push_daily_hour:     number;
 }
 
 const PREF_DEFAULTS: UserPreferences = {
@@ -137,6 +141,9 @@ const PREF_DEFAULTS: UserPreferences = {
   reward_approval: true,
   reward_cancel:   false,
   reward_history:  true,
+  push_enabled:    true,
+  push_daily_reminder: true,
+  push_daily_hour:     22,
 };
 
 // ─── PAGE ────────────────────────────────────────────────────────────────────
@@ -148,6 +155,17 @@ const Settings = () => {
   const { data: couple } = useCouple(profile?.couple_id || null);
   const partnerData = couple?.partner1?.id === profile?.id ? couple?.partner2 : couple?.partner1;
   const { theme, setTheme, accent, setAccent } = useTheme();
+
+  // ── Push Notifications ─────────────────────────────────────────────────────
+  const {
+    permission,
+    isSubscribed,
+    isLoading: pushLoading,
+    isSupported: pushSupported,
+    subscribe,
+    unsubscribe,
+    sendTestNotification,
+  } = usePushNotifications();
 
   const [name, setName] = useState("");
   useEffect(() => { if (profile?.name) setName(profile.name); }, [profile?.name]);
@@ -422,8 +440,118 @@ const Settings = () => {
         )}
       </Section>
 
-      {/* NOTIFICAÇÕES */}
-      <Section icon={Bell} title="Notificações" subtitle="Quando te avisamos" accent="primary">
+      {/* PUSH NOTIFICATIONS */}
+      <Section icon={Smartphone} title="Notificações Push" subtitle={isSubscribed ? "Ativas neste dispositivo" : "Não ativadas"} accent="primary" defaultOpen={false}>
+        {!pushSupported ? (
+          <div className="rounded-2xl bg-muted/20 border border-border/50 p-4 text-center">
+            <p className="text-sm text-muted-foreground font-body">
+              Seu navegador não suporta notificações push.<br />
+              <span className="text-xs opacity-70">No iOS, adicione o site à tela inicial primeiro.</span>
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Status Badge */}
+            <div className={`flex items-center gap-3 p-3 rounded-2xl border mb-4 ${
+              isSubscribed
+                ? "bg-success/5 border-success/20"
+                : "bg-muted/20 border-border/50"
+            }`}>
+              <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                isSubscribed ? "bg-success shadow-[0_0_6px_hsl(var(--success)/0.6)]" : "bg-muted-foreground/40"
+              }`} />
+              <div className="flex-1">
+                <p className="text-sm font-black text-foreground">
+                  {isSubscribed ? "Notificações ativas" : "Notificações inativas"}
+                </p>
+                <p className="text-[10px] text-muted-foreground font-body">
+                  {permission === "denied"
+                    ? "Bloqueadas pelo navegador — reative nas configurações do sistema"
+                    : isSubscribed
+                    ? "Este dispositivo receberá alertas do LoveQuest"
+                    : "Ative para receber lembretes e alertas de recompensa"}
+                </p>
+              </div>
+            </div>
+
+            {/* Toggle Principal */}
+            <button
+              onClick={isSubscribed ? unsubscribe : subscribe}
+              disabled={pushLoading || permission === "denied"}
+              className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-display font-black text-sm transition-all mb-3 ${
+                pushLoading || permission === "denied"
+                  ? "bg-muted/40 text-muted-foreground cursor-not-allowed"
+                  : isSubscribed
+                  ? "border border-border/60 text-muted-foreground hover:bg-muted/20"
+                  : "bg-primary text-white shadow-[0_0_16px_hsl(var(--primary)/0.4)] hover:opacity-90"
+              }`}
+            >
+              {pushLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Bell className="w-4 h-4" />
+              )}
+              {pushLoading
+                ? "Aguarde..."
+                : isSubscribed
+                ? "Desativar notificações"
+                : "Ativar notificações 🔔"}
+            </button>
+
+            {/* Botão de teste (só quando subscrito) */}
+            {isSubscribed && (
+              <>
+                <button
+                  onClick={sendTestNotification}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl border border-border/40 text-xs font-black text-muted-foreground hover:bg-muted/20 transition-colors mb-4"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Enviar notificação de teste
+                </button>
+
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 px-1">Preferências de Push</p>
+                  <ToggleRow 
+                    icon={Clock} 
+                    label="Lembrete diário" 
+                    description="Te avisa para preencher as atividades" 
+                    checked={prefs.push_daily_reminder} 
+                    onChange={(v) => updatePref("push_daily_reminder", v)} 
+                  />
+                  <div className="flex items-center justify-between py-2 px-1">
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm font-body text-foreground">Horário do lembrete</span>
+                    </div>
+                    <select 
+                      value={prefs.push_daily_hour}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        const updated = { ...prefs, push_daily_hour: val };
+                        setPrefs(updated);
+                        savePrefs.mutate(updated);
+                      }}
+                      className="bg-transparent border-none text-sm font-black text-primary focus:ring-0 cursor-pointer"
+                    >
+                      {Array.from({ length: 24 }).map((_, i) => (
+                        <option key={i} value={i} className="bg-background">{i.toString().padStart(2, '0')}:00</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Info iOS */}
+            <p className="text-[10px] text-muted-foreground/60 text-center font-body mt-3 leading-relaxed">
+              📱 No iPhone, adicione o LoveQuest à tela inicial via Safari
+              para receber notificações push.
+            </p>
+          </>
+        )}
+      </Section>
+
+      {/* NOTIFICAÇÕES IN-APP */}
+      <Section icon={Bell} title="Notificações In-App" subtitle="Quando te avisamos" accent="primary">
         <ToggleRow icon={Target}      label="Missões pendentes"          checked={prefs.notif_pending} onChange={(v) => updatePref("notif_pending", v)} />
         <ToggleRow icon={CheckCircle} label="Parceiro completou missão"  checked={prefs.notif_partner} onChange={(v) => updatePref("notif_partner", v)} />
         <ToggleRow icon={Gift}        label="Recompensa aprovada"        checked={prefs.notif_reward}  onChange={(v) => updatePref("notif_reward", v)} />

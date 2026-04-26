@@ -260,8 +260,8 @@ export function useUpdateHabit() {
       queryClient.invalidateQueries({ queryKey: ['habits', profile?.couple_id] });
       toast.success('Missão atualizada! ✏️');
     },
-    onError: (error: unknown) => {
-      const msg = error instanceof Error ? error.message : 'Erro ao atualizar missão';
+    onError: (error: any) => {
+      const msg = error?.message || 'Erro ao atualizar missão';
       toast.error(msg);
     },
   });

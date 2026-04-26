@@ -83,7 +83,15 @@ const Missions = () => {
 
   const handleCreate = () => {
     if (!newName.trim()) return;
-    createHabit.mutate({ name: newName, category: newDesc, xp_value: newXp, frequency: newFreq, type: newType, is_active: true, emoji: null }, {
+    createHabit.mutate({ 
+      name: newName.trim(), 
+      category: newDesc.trim() || null, 
+      xp_value: newXp, 
+      frequency: newFreq, 
+      type: newType, 
+      is_active: true, 
+      emoji: null 
+    }, {
       onSuccess: () => { setShowCreate(false); setNewName(""); setNewDesc(""); setNewXp(20); }
     });
   };
@@ -101,7 +109,15 @@ const Missions = () => {
   const handleUpdate = () => {
     if (!editingMission || !editName.trim()) return;
     updateHabit.mutate(
-      { id: editingMission.id, updates: { name: editName, category: editDesc, xp_value: editXp, frequency: editFreq } },
+      { 
+        id: editingMission.id, 
+        updates: { 
+          name: editName.trim(), 
+          category: editDesc.trim() || null, 
+          xp_value: editXp, 
+          frequency: editFreq 
+        } 
+      },
       { onSuccess: () => setEditingMission(null) }
     );
   };
